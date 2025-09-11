@@ -1,5 +1,6 @@
 #Need Transformers installed to run
 #Not set up yet to run with agent. This should just take in the reactants pulled from the agent
+#output is a list of smiles of potential products from top 5 posibilities
 
 
 # !pip install -U transformers torch rdkit-pypi
