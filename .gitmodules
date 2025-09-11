@@ -1,0 +1,3 @@
+[submodule "magnetstein"]
+	path = magnetstein
+	url = https://github.com/BDomzal/magnetstein.git
