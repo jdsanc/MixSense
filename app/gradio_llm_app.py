@@ -311,7 +311,7 @@ Backend: Magnetstein (robust optimal transport)
 # Gradio Interface
 # ----------------------------
 with gr.Blocks(
-    title="LLM-Enhanced NMR Chemistry Analysis", theme=gr.themes.soft()
+    title="LLM-Enhanced NMR Chemistry Analysis", theme=gr.themes.Soft()
 ) as demo:
     gr.Markdown("""
     # 🧪 LLM-Enhanced NMR Chemistry Analysis
@@ -462,4 +462,4 @@ with gr.Blocks(
     )
 
 if __name__ == "__main__":
-    demo.launch(share=True, server_name="localhost", server_port=7860)
+    demo.launch(share=True, server_name="localhost", server_port=10860)

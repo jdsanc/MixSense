@@ -7,3 +7,5 @@ simple_download_nmrbank.py
 .gradio
 __pycache__
 .DS_Store
+NMRBank/extracted/*
+NMRBank/nmrbank_dataframe.*
