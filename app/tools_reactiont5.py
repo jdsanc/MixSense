@@ -143,19 +143,24 @@ def _api_propose_products(reactants: str, reagents: str, beams: int, n_best: int
     return dedup[:n_best]
 
 
-def get_unique_components(predictions: List[str]) -> List[str]:
+def get_unique_components(predictions: List[str], reactants: str, reagents: str = "") -> List[str]:
     """
-    Extract unique components from all product predictions.
+    Extract unique components from all product predictions, reactants, and reagents.
     Uses the enhanced function from reactants_to_products if available.
     """
+    # Combine reactants, reagents, and predictions into a single list
+    all_sources = [reactants, reagents] + predictions
+
     if LOCAL_MODEL_AVAILABLE:
-        return unique_components_from_balanced(predictions)
+        # Pass the combined list to the enhanced function
+        return unique_components_from_balanced(all_sources)
     else:
         # Fallback implementation
         seen = set()
         components = []
-        for prediction in predictions:
-            for component in prediction.split('.'):
+        # Process the combined list
+        for source_string in all_sources:
+            for component in source_string.split('.'):
                 component = component.strip()
                 if component and component not in seen and _valid_smiles(component):
                     seen.add(component)
