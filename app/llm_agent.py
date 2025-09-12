@@ -204,6 +204,71 @@ Common chemical names you should recognize: anisole, benzene, toluene, phenol, b
                         mixture_data["intensity"], 
                         refs
                     )
+                elif backend == "deconvolve":
+                    # Use external Masserstein+Gurobi deconvolution script (moved into app/)
+                    import os, json, tempfile, subprocess
+                    script_path = "/Users/luciavinalopez/LLMHackathon/app/tool_deconvolve_nmr.py"
+                    license_path = "/Users/luciavinalopez/LLMHackathon/magnetstein/gurobi.lic"
+                    with tempfile.TemporaryDirectory() as td:
+                        # Write mixture CSV
+                        mix_path = os.path.join(td, "mixture.csv")
+                        with open(mix_path, "w") as f:
+                            for x, y in zip(mixture_data["ppm"], mixture_data["intensity"]):
+                                f.write(f"{x},{y}\n")
+                        # Write component CSVs
+                        comp_paths = []
+                        names = []
+                        for i, r in enumerate(refs):
+                            cpath = os.path.join(td, f"comp_{i}.csv")
+                            with open(cpath, "w") as f:
+                                for x, y in zip(r["ppm"], r["intensity"]):
+                                    f.write(f"{x},{y}\n")
+                            comp_paths.append(cpath)
+                            names.append(r.get("name", f"comp{i}"))
+                        cmd = [
+                            os.environ.get("PYTHON", "python"),
+                            script_path,
+                            mix_path,
+                            *comp_paths,
+                            "--names",
+                            *names,
+                            "--json",
+                            "--quiet",
+                        ]
+                        if os.path.exists(license_path):
+                            cmd += ["--license-file", license_path]
+                        proc = subprocess.run(cmd, capture_output=True, text=True)
+                        stdout = proc.stdout or ""
+                        json_line = ""
+                        for ln in stdout.splitlines()[::-1]:
+                            if ln.startswith("JSON:"):
+                                json_line = ln[len("JSON:"):].strip()
+                                break
+                        if not json_line:
+                            start = stdout.rfind("{")
+                            end = stdout.rfind("}")
+                            if start != -1 and end != -1 and end > start:
+                                json_line = stdout[start:end+1]
+                        payload = json.loads(json_line) if json_line else {"proportions": {}}
+                        conc = payload.get("proportions", {})
+                        if not conc:
+                            import re
+                            try:
+                                grab = False
+                                est = {}
+                                for ln in stdout.splitlines():
+                                    if ln.strip().lower().startswith("estimated proportions"):
+                                        grab = True
+                                        continue
+                                    if grab:
+                                        m = re.match(r"\s*(.+?)\s+([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)\s*$", ln)
+                                        if m:
+                                            est[m.group(1).strip()] = float(m.group(2))
+                                if est:
+                                    conc = est
+                            except Exception:
+                                pass
+                        quant_result = {"concentrations": conc, "raw": payload}
                 else:
                     quant_result = asics_quantify(
                         crude_ppm=mixture_data["ppm"],
