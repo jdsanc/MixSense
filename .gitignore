@@ -2,3 +2,8 @@ NMRExtractor/
 example_nmrdb_usage*
 test_app_integration*
 test_nmrdb_integration*
+huggingface.ipynb
+simple_download_nmrbank.py
+.gradio
+__pycache__
+.DS_Store
