@@ -19,6 +19,13 @@ from typing import List, Dict, Any, Tuple, Optional
 from .agent_pocketflow import build_llm_graph
 from .llm_agent import get_agent, process_natural_language_request
 
+# Import flavor predictor
+try:
+    from flavor_predictor import FlavorPredictor
+    _HAS_FLAVOR_PREDICTOR = True
+except Exception:
+    _HAS_FLAVOR_PREDICTOR = False
+
 # Check tool availability
 try:
     from .tools_magnetstein import quantify_single as magnet_quant_single, quantify_timeseries as magnet_quant_series
@@ -240,6 +247,80 @@ Backend: Magnetstein (robust optimal transport)
         return f"Time-series analysis failed: {str(e)}", "", pd.DataFrame(), "{}"
 
 # ----------------------------
+# Flavor Prediction
+# ----------------------------
+def run_flavor_prediction(smiles_input: str, show_details: bool = False) -> Tuple[str, pd.DataFrame, str]:
+    """
+    Predict flavors from SMILES strings using the FART_Augmented model
+    
+    Args:
+        smiles_input: SMILES string or multiple SMILES separated by newlines
+        show_details: Whether to show detailed probability information
+        
+    Returns:
+        Tuple of (status_message, results_dataframe, details_json)
+    """
+    if not _HAS_FLAVOR_PREDICTOR:
+        return "Flavor predictor not available. Please ensure flavor_predictor.py is in the project root.", pd.DataFrame(), "{}"
+    
+    if not smiles_input.strip():
+        return "Please provide one or more SMILES strings.", pd.DataFrame(), "{}"
+    
+    try:
+        # Initialize predictor (this will load the model)
+        predictor = FlavorPredictor()
+        
+        # Parse SMILES input (split by newlines and filter empty lines)
+        smiles_list = [s.strip() for s in smiles_input.split('\n') if s.strip()]
+        
+        if not smiles_list:
+            return "No valid SMILES strings found.", pd.DataFrame(), "{}"
+        
+        # Make predictions
+        results = predictor.predict_flavor(smiles_list)
+        
+        # Build results DataFrame
+        results_data = []
+        for i, result in enumerate(results, 1):
+            row = {
+                "SMILES": result['smiles'],
+                "Predicted Flavor": result['predicted_flavor'],
+                "Confidence": f"{result['confidence']:.3f}"
+            }
+            
+            if show_details:
+                # Add individual probabilities
+                for flavor, prob in result['all_probabilities'].items():
+                    row[f"{flavor} Prob"] = f"{prob:.3f}"
+            
+            results_data.append(row)
+        
+        results_df = pd.DataFrame(results_data)
+        
+        # Create summary
+        flavor_counts = {}
+        for result in results:
+            flavor = result['predicted_flavor']
+            flavor_counts[flavor] = flavor_counts.get(flavor, 0) + 1
+        
+        summary = f"Analyzed {len(smiles_list)} molecule(s). "
+        summary += "Flavor distribution: " + ", ".join([f"{flavor}: {count}" for flavor, count in flavor_counts.items()])
+        
+        # Create details JSON
+        details = {
+            "total_molecules": len(smiles_list),
+            "flavor_distribution": flavor_counts,
+            "model_used": "FartLabs/FART_Augmented",
+            "average_confidence": sum(r['confidence'] for r in results) / len(results)
+        }
+        
+        return summary, results_df, json.dumps(details, indent=2)
+        
+    except Exception as e:
+        error_msg = f"Flavor prediction failed: {str(e)}"
+        return error_msg, pd.DataFrame(), json.dumps({"error": str(e)}, indent=2)
+
+# ----------------------------
 # Gradio Interface
 # ----------------------------
 with gr.Blocks(title="LLM-Enhanced NMR Chemistry Analysis", theme=gr.themes.Soft()) as demo:
@@ -345,6 +426,58 @@ with gr.Blocks(title="LLM-Enhanced NMR Chemistry Analysis", theme=gr.themes.Soft
                 interactive=False
             )
         
+        with gr.Tab("🍯 Flavor Prediction"):
+            gr.Markdown("### Molecular Flavor Prediction")
+            gr.Markdown("Predict the taste/flavor of molecules from their SMILES structures using the FART_Augmented model.")
+            
+            with gr.Row():
+                with gr.Column(scale=2):
+                    flavor_smiles = gr.Textbox(
+                        label="SMILES Strings",
+                        placeholder="Enter one or more SMILES strings (one per line):\nCCO\nCCN\nCC(=O)O",
+                        lines=8,
+                        info="Enter SMILES strings separated by newlines. Examples: CCO (ethanol), CC(=O)O (acetic acid), C1=CC=C(C=C1)O (phenol)"
+                    )
+                    
+                    flavor_details = gr.Checkbox(
+                        label="Show detailed probabilities",
+                        value=False,
+                        info="Show probability scores for all flavor categories"
+                    )
+                    
+                    flavor_btn = gr.Button("🍯 Predict Flavors", variant="primary", size="lg")
+                
+                with gr.Column(scale=1):
+                    flavor_status = gr.Textbox(label="Status", interactive=False, lines=3)
+                    flavor_info = gr.JSON(label="Analysis Details")
+            
+            with gr.Row():
+                flavor_results = gr.Dataframe(
+                    label="Flavor Prediction Results",
+                    interactive=False,
+                    wrap=True
+                )
+            
+            # Example molecules section
+            with gr.Accordion("📚 Example Molecules", open=False):
+                gr.Markdown("""
+                **Try these example SMILES strings:**
+                
+                - `CCO` - Ethanol (Sweet)
+                - `CCN` - Ethylamine (Undefined)  
+                - `CC(=O)O` - Acetic acid (Sour)
+                - `C1=CC=C(C=C1)O` - Phenol (Sweet)
+                - `C1=CC=C(C=C1)N` - Aniline (Bitter)
+                - `CC(=O)OC1=CC=CC=C1C(=O)O` - Aspirin (Sour)
+                
+                **Flavor Categories:**
+                - **Sweet**: Sweet-tasting compounds
+                - **Bitter**: Bitter-tasting compounds
+                - **Sour**: Sour-tasting compounds  
+                - **Umami**: Umami-tasting compounds
+                - **Undefined**: Tasteless or undefined compounds
+                """)
+        
         with gr.Tab("ℹ️ About"):
             gr.Markdown("""
             ## How It Works
@@ -364,12 +497,14 @@ with gr.Blocks(title="LLM-Enhanced NMR Chemistry Analysis", theme=gr.themes.Soft
             - **NMRBank**: Reference NMR spectra database
             - **ASICS**: Standard NMR quantification (R-based)
             - **Magnetstein**: Robust quantification using optimal transport
+            - **FART_Augmented**: Molecular flavor prediction from SMILES
             - **PocketFlow**: Workflow orchestration framework
             
             ### 🎯 Perfect for:
             - Reaction analysis and product identification
             - NMR mixture quantification
             - Time-series kinetic studies
+            - Molecular flavor prediction and taste analysis
             - Educational chemistry demonstrations
             
             **Note**: Requires `HF_TOKEN` environment variable for LLM access.
@@ -386,6 +521,12 @@ with gr.Blocks(title="LLM-Enhanced NMR Chemistry Analysis", theme=gr.themes.Soft
         run_llm_timeseries,
         inputs=[timeseries_input, timeseries_files, timeseries_model],
         outputs=[timeseries_status, timeseries_narrative, timeseries_results, timeseries_workflow]
+    )
+    
+    flavor_btn.click(
+        run_flavor_prediction,
+        inputs=[flavor_smiles, flavor_details],
+        outputs=[flavor_status, flavor_results, flavor_info]
     )
 
 if __name__ == "__main__":
