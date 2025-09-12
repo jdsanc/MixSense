@@ -87,13 +87,13 @@ balanced_preds = [add_water_for_new_esters(reactants, p) for p in preds]
 # (optional) de-dup again after balancing
 balanced_preds = list(dict.fromkeys(balanced_preds))
 
-print("Raw model predictions (top-k):")
-for i, p in enumerate(preds, 1):
-    print(f"{i}. {p}")
+# print("Raw model predictions (top-k):")
+# for i, p in enumerate(preds, 1):
+#     print(f"{i}. {p}")
 
-print("\nBalanced predictions (H2O added when ester formed):")
-for i, p in enumerate(balanced_preds, 1):
-    print(f"{i}. {p}")
+# print("\nBalanced predictions (H2O added when ester formed):")
+# for i, p in enumerate(balanced_preds, 1):
+#     print(f"{i}. {p}")
 
 def unique_components_from_balanced(balanced_preds):
     """
@@ -113,6 +113,6 @@ def unique_components_from_balanced(balanced_preds):
 
 
 # usage
-all_unique_components = unique_components_from_balanced(balanced_preds)
+# all_unique_components = unique_components_from_balanced(balanced_preds)
 
-print(f'Unique potential components: {all_unique_components}')
+# print(f'Unique potential components: {all_unique_components}')
