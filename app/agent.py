@@ -3,7 +3,15 @@ import pandas as pd
 from rdkit import Chem
 from .tools_reactiont5 import propose_products
 from .tools_nmrbank import get_reference_by_smiles
+
+try:
+    from .tools_nmrdb import get_reference_by_smiles_nmrdb
+
+    _HAS_NMRDB = True
+except ImportError:
+    _HAS_NMRDB = False
 from .tools_asics import asics_quantify
+
 
 def normalize_smiles_list(text: str) -> List[str]:
     """
@@ -13,9 +21,10 @@ def normalize_smiles_list(text: str) -> List[str]:
     try:
         import sys
         from pathlib import Path
+
         sys.path.append(str(Path(__file__).parent.parent))
         from reactants_to_products.utils import normalize_chemical_names
-        
+
         # Use the enhanced normalization function
         result = normalize_chemical_names(text)
         if result:
@@ -23,11 +32,11 @@ def normalize_smiles_list(text: str) -> List[str]:
             return result
     except ImportError:
         print("Using fallback chemical name normalization")
-    
+
     # Fallback to original implementation
     parts = [p.strip() for p in text.replace(";", ",").split(",") if p.strip()]
     out = []
-    
+
     # Extended chemical name to SMILES mapping (enhanced from original)
     name_to_smiles = {
         "anisole": "COc1ccccc1",
@@ -54,16 +63,16 @@ def normalize_smiles_list(text: str) -> List[str]:
         "dichloromethane": "C(Cl)Cl",
         "diethyl ether": "CCOCC",
     }
-    
+
     for p in parts:
         mol = None
-        
+
         # First try to parse as SMILES directly
         try:
             mol = Chem.MolFromSmiles(p)
         except:
             mol = None
-        
+
         if mol is None:
             # Try common name lookup (case insensitive)
             normalized_name = p.lower().strip()
@@ -72,37 +81,61 @@ def normalize_smiles_list(text: str) -> List[str]:
                     mol = Chem.MolFromSmiles(name_to_smiles[normalized_name])
                 except:
                     mol = None
-        
+
         if mol is None:
             print(f"Warning: Could not parse '{p}' as SMILES or chemical name")
             continue
-            
+
         if mol:
             canonical = Chem.MolToSmiles(mol, canonical=True)
             out.append(canonical)
-    
+
     return list(dict.fromkeys(out))
+
 
 def step_propose(reactants_smiles: List[str], reagents: str, topk=5) -> List[str]:
     reactants_str = " . ".join(reactants_smiles)
     preds = propose_products(reactants_str, reagents=reagents, n_best=topk)
-    return [s for s,_ in preds]
+    return [s for s, _ in preds]
+
 
 def load_refs_for_species(smiles_list: List[str]) -> List[Dict[str, Any]]:
     refs = []
     for s in smiles_list:
+        # First try local NMRBank database
         ref = get_reference_by_smiles(s)
+
+        # If not found in NMRBank and NMRDB is available, try NMRDB.org
+        if not ref and _HAS_NMRDB:
+            print(f"Not found in NMRBank, trying NMRDB.org for: {s}")
+            ref = get_reference_by_smiles_nmrdb(
+                s, delay=0.5
+            )  # Short delay for batch processing
+
         if ref:
-            refs.append({"name": ref["name"], "ppm": ref["ppm"], "intensity": ref["intensity"], "smiles": s})
+            refs.append(
+                {
+                    "name": ref["name"],
+                    "ppm": ref["ppm"],
+                    "intensity": ref["intensity"],
+                    "smiles": s,
+                }
+            )
     return refs
 
-def quantify_mixture(ppm: List[float], intensity: List[float], selected_refs: List[Dict[str, Any]]) -> Dict[str, Any]:
+
+def quantify_mixture(
+    ppm: List[float], intensity: List[float], selected_refs: List[Dict[str, Any]]
+) -> Dict[str, Any]:
     # ASICS expects 1 mixture and an array of reference spectra (each with ppm/intensity + name)
     res = asics_quantify(
         crude_ppm=ppm,
         crude_intensity=intensity,
-        refs=[{"name": r["name"], "ppm": r["ppm"], "intensity": r["intensity"]} for r in selected_refs],
-        nb_protons=None,            # optional: pass in later if available
+        refs=[
+            {"name": r["name"], "ppm": r["ppm"], "intensity": r["intensity"]}
+            for r in selected_refs
+        ],
+        nb_protons=None,  # optional: pass in later if available
         exclusion=None,
         max_shift=0.02,
         quant_method="FWER",
