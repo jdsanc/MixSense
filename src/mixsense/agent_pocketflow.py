@@ -3,7 +3,7 @@ LLM-Enhanced PocketFlow graph for chemistry analysis:
   ParseNL (LLM) -> ProposeProducts (ReactionT5) -> RetrieveRefs (NMRBank) ->
   Quantify (ASICS or Magnetstein) -> (Optional) NMR->Structure -> Narrate (LLM)
 """
-from pocketflow import Node, Flow  # pip install pocketflow
+from pocketflow import Node, Flow
 from .llm_agent import ChemistryLLMAgent, AnalysisTask
 from .tools_reactiont5 import propose_products
 from .tools_nmrbank import get_reference_by_smiles

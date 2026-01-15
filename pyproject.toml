@@ -1,0 +1,20 @@
+[project]
+name = "mixsense"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "beautifulsoup4>=4.14.3",
+    "gradio>=6.3.0",
+    "matplotlib>=3.10.8",
+    "numpy>=1.24,<2.0",
+    "opennmt-py>=3.5.1",
+    "pandas>=2.3.3",
+    "pocketflow>=0.0.3",
+    "pulp>=3.3.0",
+    "rdkit-pypi>=2022.9.5",
+    "requests>=2.32.5",
+    "torch>=2.2.2",
+    "transformers>=4.57.5",
+]

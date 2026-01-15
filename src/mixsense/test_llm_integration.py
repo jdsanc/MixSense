@@ -4,15 +4,11 @@ Test script for LLM-enhanced chemistry analysis
 Demonstrates the agentic workflow without requiring Gradio UI
 """
 import os
-import sys
 import json
 from pathlib import Path
 
-# Add parent directory to path for imports
-sys.path.append(str(Path(__file__).parent.parent))
-
-from app.llm_agent import ChemistryLLMAgent, process_natural_language_request
-from app.agent_pocketflow import build_llm_graph
+from mixsense.llm_agent import ChemistryLLMAgent, process_natural_language_request
+from mixsense.agent_pocketflow import build_llm_graph
 
 def test_llm_parsing():
     """Test LLM parsing of chemistry requests"""
@@ -89,7 +85,7 @@ def test_example_data():
     # Test CSV parsing
     try:
         import pandas as pd
-        from app.gradio_llm_app import parse_csv
+        from mixsense.gradio_llm_app import parse_csv
         
         test_file = csv_files[0]
         print(f"   📄 Testing with: {test_file.name}")
@@ -151,7 +147,7 @@ def main():
     # Provide usage instructions
     print("\n📚 Usage Instructions:")
     print("1. Set HF_TOKEN environment variable for LLM access")
-    print("2. Run: python app/gradio_llm_app.py")
+    print("2. Run: python -m mixsense.gradio_llm_app")
     print("3. Open browser to http://localhost:7860")
     print("4. Try natural language requests like:")
     print("   'Analyze bromination of anisole with Br2 and FeBr3'")

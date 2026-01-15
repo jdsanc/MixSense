@@ -1,6 +1,10 @@
 # LLMHackathon
 
-
+```
+uv sync
+uv pip install -e .
+pip install -e magnetstein
+```
 
 # 🧪 NMR Mixture Deconvolution
 
