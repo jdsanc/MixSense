@@ -21,7 +21,7 @@ except ImportError as e:
     LOCAL_MODEL_AVAILABLE = False
     print(f"Local model not available, will use API: {e}")
 
-API_URL = "https://api-inference.huggingface.co/models/sagawa/ReactionT5v2-forward"
+API_URL = "https://router.huggingface.co/hf-inference/models/sagawa/ReactionT5v2-forward"
 headers = {
     "Authorization": f"Bearer {os.environ.get('HF_TOKEN', '')}",
 }

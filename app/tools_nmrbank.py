@@ -97,7 +97,7 @@ def _parse_h1_with_integrals(cell: str) -> Tuple[List[float], List[float]]:
             if not nums:
                 continue
 
-            # pick first ppm-like number in range (skip obvious coupling constants)
+            # pick first ppm-like number in range (skip coupling constants and proton counts)
             ppm_val = None
             for m in nums:
                 val = float(m.group())
@@ -105,6 +105,9 @@ def _parse_h1_with_integrals(cell: str) -> Tuple[List[float], List[float]]:
                 head = token[max(0, m.start()-4): m.start()]
                 tail = token[m.end(): m.end()+6]
                 if "Hz" in tail or "J" in head or "J=" in head:
+                    continue
+                # Skip proton counts (numbers followed by H)
+                if re.match(r"\s*H\b", tail, flags=re.IGNORECASE):
                     continue
                 if _H1_RANGE[0] <= val <= _H1_RANGE[1]:
                     ppm_val = val
