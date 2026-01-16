@@ -1,6 +1,9 @@
 # Project-specific
 NMRExtractor/
 NMRBank/NMRBank/
+results/
+app/eval/data/
+NMRBank/*.csv
 
 # Python
 __pycache__/
