@@ -5,6 +5,10 @@ import os
 import sys
 from pathlib import Path
 from rdkit import Chem
+from rdkit import RDLogger
+
+# Suppress RDKit warnings for invalid SMILES parsing
+RDLogger.DisableLog('rdApp.*')
 
 # Add the reactants_to_products module to path
 sys.path.append(str(Path(__file__).parent.parent))
@@ -51,6 +55,9 @@ def propose_products(reactants: str, reagents: str = "", beams=10, n_best=5, max
     Enhanced with water balancing for ester formation reactions.
     Input format: 'REACTANT_SMILES . REACTANT_SMILES' for reactants
     """
+    # Handle None n_best - default to beams count
+    if n_best is None:
+        n_best = beams
     
     # Try local model first
     if LOCAL_MODEL_AVAILABLE:
@@ -194,19 +201,31 @@ def resolve_names_to_smiles(text: str) -> List[str]:
         pass
 
     fallback_map = {
+        # Common aromatics
         "anisole": "COc1ccccc1",
         "benzene": "c1ccccc1",
         "toluene": "Cc1ccccc1",
         "phenol": "Oc1ccccc1",
         "bromobenzene": "Brc1ccccc1",
+        # Bromoanisole products
+        "p-bromoanisole": "COc1ccc(Br)cc1",
+        "4-bromoanisole": "COc1ccc(Br)cc1",
+        "para-bromoanisole": "COc1ccc(Br)cc1",
+        "o-bromoanisole": "COc1ccccc1Br",
+        "2-bromoanisole": "COc1ccccc1Br",
+        "ortho-bromoanisole": "COc1ccccc1Br",
+        # Terpenes
         "alpha-pinene": "CC1=CCC2CC1C2(C)C",
         "α-pinene": "CC1=CCC2CC1C2(C)C",
         "pinene": "CC1=CCC2CC1C2(C)C",
+        # Esters
         "benzyl benzoate": "O=C(OCc1ccccc1)c2ccccc2",
+        # Reagents
         "br2": "BrBr",
         "bromine": "BrBr",
         "febr3": "Br[Fe](Br)Br",
         "iron(iii) bromide": "Br[Fe](Br)Br",
+        "iron tribromide": "Br[Fe](Br)Br",
     }
 
     for tok in parts:

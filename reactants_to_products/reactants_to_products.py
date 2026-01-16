@@ -6,6 +6,10 @@ Predicts products from reactants using the sagawa/ReactionT5v2-forward model.
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 import torch
 from rdkit import Chem
+from rdkit import RDLogger
+
+# Suppress RDKit warnings for invalid SMILES parsing
+RDLogger.DisableLog('rdApp.*')
 
 MODEL_NAME = "sagawa/ReactionT5v2-forward"
 

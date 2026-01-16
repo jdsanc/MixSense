@@ -1,1 +1,38 @@
-NMRExtractor/ 
+# Project-specific
+NMRExtractor/
+NMRBank/NMRBank/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# macOS
+.DS_Store
+
+# Gradio
+.gradio/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Environment
+.env
+.venv/
+env/
+venv/
+
+# Generated files
+*.zip

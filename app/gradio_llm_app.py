@@ -3,7 +3,7 @@
 LLM-Enhanced Gradio UI for NMR Chemistry Analysis.
 
 Features:
-- LLM Agent Analysis: Natural language input for chemistry analysis
+- LLM Agent Chat: Natural language input with autonomous tool calling
 - Manual Deconvolution: Step-by-step control over the analysis pipeline
 - Time-Series Analysis: Track reactions over time with multiple spectra
 """
@@ -26,6 +26,10 @@ import matplotlib.pyplot as plt
 from .tools_nmrbank import get_reference_by_smiles
 from .tools_reactiont5 import resolve_names_to_smiles, propose_products, get_unique_components
 from .tools_deconvolve import deconvolve_spectra
+from .utils import plot_spectrum
+
+# Agent import
+from .chemistry_agent import ChemistryAgent, LLM_MODELS, create_agent
 
 # Optional tools
 try:
@@ -37,89 +41,6 @@ try:
 except Exception:
     _HAS_MAGNETSTEIN = False
 
-# LLM support
-import requests
-
-# Model configurations: (display_name, api_url, model_id)
-LLM_MODEL_CONFIG = {
-    # Cerebras (fast Llama models)
-    "Llama 3.1 8B (Cerebras)": (
-        "https://router.huggingface.co/cerebras/v1/chat/completions",
-        "llama3.1-8b"
-    ),
-    "Llama 3.3 70B (Cerebras)": (
-        "https://router.huggingface.co/cerebras/v1/chat/completions",
-        "llama-3.3-70b"
-    ),
-    # DeepSeek
-    "DeepSeek V3": (
-        "https://router.huggingface.co/sambanova/v1/chat/completions",
-        "DeepSeek-V3-0324"
-    ),
-    # Qwen
-    "Qwen 2.5 72B": (
-        "https://router.huggingface.co/hyperbolic/v1/chat/completions",
-        "Qwen/Qwen2.5-72B-Instruct"
-    ),
-}
-
-LLM_MODELS = list(LLM_MODEL_CONFIG.keys())
-
-
-# ----------------------------
-# LLM Client
-# ----------------------------
-class ChemistryLLM:
-    """LLM client for parsing chemistry requests via HuggingFace Router."""
-
-    def __init__(self, model_name: str = "Llama 3.1 8B (Cerebras)"):
-        self.model_name = model_name
-        config = LLM_MODEL_CONFIG.get(model_name, LLM_MODEL_CONFIG["Llama 3.1 8B (Cerebras)"])
-        self.api_url, self.model_id = config
-        self.headers = {
-            "Authorization": f"Bearer {os.environ.get('HF_TOKEN', '')}",
-        }
-
-    def query(self, user_input: str) -> Dict[str, Any]:
-        """Parse chemistry request using LLM."""
-        system_prompt = """You are a chemistry analysis expert. Parse the user's request and extract:
-1. Chemical reactants (names or SMILES)
-2. Reagents/conditions
-3. Analysis type (reaction, quantification, timeseries)
-
-Respond with JSON only:
-{
-    "reactants": ["compound1", "compound2"],
-    "reagents": "conditions or reagents",
-    "analysis_type": "reaction|quantification|timeseries",
-    "notes": "any relevant details"
-}
-
-Common chemicals: anisole, benzene, toluene, phenol, bromobenzene, p-bromoanisole, o-bromoanisole, bromine (Br2), iron(III) bromide (FeBr3), pinene, benzyl benzoate, acetic acid, ethanol."""
-
-        try:
-            payload = {
-                "model": self.model_id,
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_input}
-                ],
-                "temperature": 0.1,
-                "max_tokens": 500
-            }
-            response = requests.post(self.api_url, headers=self.headers, json=payload, timeout=60)
-            response.raise_for_status()
-            content = response.json()["choices"][0]["message"]["content"]
-
-            # Extract JSON from response
-            json_match = re.search(r'\{.*\}', content, re.DOTALL)
-            if json_match:
-                return json.loads(json_match.group())
-        except Exception as e:
-            print(f"LLM query failed: {e}")
-
-        return None
-
 
 # ----------------------------
 # Utilities
@@ -128,12 +49,12 @@ def parse_csv(file) -> Dict[str, List[float]]:
     """Parse CSV with two columns: ppm, intensity."""
     if file is None:
         return {"ppm": [], "intensity": []}
-    
+
     filepath = file.name if hasattr(file, "name") else file
-    
+
     # Try reading with header first (most common case)
     df = pd.read_csv(filepath)
-    
+
     # Check if we got valid numeric data
     # If first column values can't be converted to float, try without header
     try:
@@ -142,10 +63,10 @@ def parse_csv(file) -> Dict[str, List[float]]:
     except (ValueError, TypeError):
         # First row looks like data, not a header - re-read without header
         df = pd.read_csv(filepath, header=None)
-    
+
     if len(df.columns) < 2:
         raise ValueError(f"CSV must have at least 2 columns, got {len(df.columns)}")
-    
+
     df = df.rename(columns={df.columns[0]: "ppm", df.columns[1]: "intensity"})
     return {
         "ppm": df["ppm"].astype(float).tolist(),
@@ -166,28 +87,8 @@ def parse_timeseries(files: List) -> Tuple[List[float], List[Dict[str, List[floa
     return [t for t, _ in items], [m for _, m in items]
 
 
-def _plot_spectrum(ppm: List[float], intensity: List[float], title: str, style="auto") -> str:
-    """Plot spectrum and save to temp PNG."""
-    fig, ax = plt.subplots(figsize=(5, 2.5), dpi=150)
-
-    if style == "sticks" or (style == "auto" and len(ppm) <= 100):
-        for x, y in zip(ppm, intensity or [1.0] * len(ppm)):
-            ax.vlines(x, 0, y, linewidth=1.2)
-    else:
-        ax.plot(ppm, intensity, linewidth=0.8)
-
-    if len(ppm) >= 2:
-        ax.invert_xaxis()
-    ax.set_xlabel("ppm")
-    ax.set_ylabel("intensity")
-    ax.set_title(title, fontsize=10)
-    ax.grid(True, linewidth=0.3, alpha=0.4)
-
-    path = os.path.join(tempfile.mkdtemp(), f"{re.sub(r'[^A-Za-z0-9_.-]+', '_', title)[:40]}.png")
-    fig.tight_layout()
-    fig.savefig(path, bbox_inches="tight")
-    plt.close(fig)
-    return path
+# Use shared plot_spectrum from utils (aliased for backward compatibility)
+_plot_spectrum = plot_spectrum
 
 
 def load_references(smiles_list: List[str]) -> List[Dict[str, Any]]:
@@ -218,156 +119,160 @@ def render_reference_pngs(refs: List[Dict[str, Any]], limit: int = 8) -> List[st
 
 
 # ----------------------------
-# LLM Agent Functions
+# Agent Chat Functions
 # ----------------------------
-def parse_llm_request(user_input: str, model_name: str = None) -> Dict[str, Any]:
-    """
-    Parse natural language chemistry request into structured data.
-    Uses LLM if model_name provided, otherwise falls back to keyword matching.
-    """
-    result = {
-        "reactants": [],
-        "reagents": "",
-        "analysis_type": "reaction",
-        "raw_input": user_input,
-        "llm_used": False
-    }
-
-    # Try LLM parsing first
-    if model_name and os.environ.get("HF_TOKEN"):
-        llm = ChemistryLLM(model_name)
-        parsed = llm.query(user_input)
-        if parsed:
-            result["reactants"] = parsed.get("reactants", [])
-            result["reagents"] = parsed.get("reagents", "")
-            result["analysis_type"] = parsed.get("analysis_type", "reaction")
-            result["notes"] = parsed.get("notes", "")
-            result["llm_used"] = True
-            return result
-
-    # Fallback: keyword-based parsing
-    text = user_input.lower()
-
-    chemicals = ["anisole", "benzene", "toluene", "phenol", "bromobenzene",
-                 "br2", "bromine", "febr3", "pinene", "benzyl benzoate",
-                 "acetic acid", "ethanol", "methanol", "water", "chlorine", "aspirin"]
-
-    found = []
-    for chem in chemicals:
-        if chem in text:
-            found.append(chem)
-
-    reagent_keywords = ["febr3", "catalyst", "iron", "acid catalyst"]
-    for f in found:
-        is_reagent = any(rk in f for rk in reagent_keywords)
-        if is_reagent:
-            result["reagents"] = f
-        else:
-            result["reactants"].append(f)
-
-    if "time" in text or "kinetic" in text or "series" in text:
-        result["analysis_type"] = "timeseries"
-    elif "quantif" in text or "deconvol" in text or "mixture" in text:
-        result["analysis_type"] = "quantification"
-
-    return result
+# Global agent instance (will be recreated per model change)
+_agent: Optional[ChemistryAgent] = None
 
 
-def run_llm_analysis(
-    user_input: str,
-    mixture_csv,
-    model_name: str = "deepseek-ai/DeepSeek-V3:together"
-) -> Tuple[str, str, pd.DataFrame, str, List[str], pd.DataFrame]:
-    """
-    Run LLM-guided analysis pipeline.
+def get_agent(model_name: str) -> ChemistryAgent:
+    """Get or create the agent."""
+    global _agent
+    if _agent is None or _agent.model_name != model_name:
+        _agent = create_agent(model_name)
+    return _agent
 
-    Returns: (status, narrative, results_df, workflow_json, ref_images, quant_df)
-    """
-    if not user_input.strip():
-        return ("Please describe your chemistry analysis.", "", pd.DataFrame(), "{}", [], pd.DataFrame())
 
-    # Parse the request using LLM
-    parsed = parse_llm_request(user_input, model_name=model_name)
+def format_tool_calls(tool_calls: List[Dict]) -> str:
+    """Format tool calls for display."""
+    if not tool_calls:
+        return ""
 
-    log_parts = [f"Parsed request: {json.dumps(parsed, indent=2)}"]
-    results_data = []
-    quant_df = pd.DataFrame()
-    ref_images = []
+    lines = ["**Tool Calls:**"]
+    for tc in tool_calls:
+        tool = tc.get("tool", "unknown")
+        args = tc.get("arguments", {})
+        result = tc.get("result", {})
 
-    # Step 1: Resolve reactants
-    reactant_smiles = []
-    for r in parsed["reactants"]:
-        resolved = resolve_names_to_smiles(r)
-        if resolved:
-            reactant_smiles.extend(resolved)
-            results_data.append({"Type": "Reactant", "Name": r, "SMILES": resolved[0]})
-            log_parts.append(f"Resolved {r} → {resolved[0]}")
+        # Format arguments
+        args_str = ", ".join(f"{k}={repr(v)[:50]}" for k, v in args.items())
 
-    if not reactant_smiles:
-        return ("No valid reactants found in request.", "\n".join(log_parts),
-                pd.DataFrame(), json.dumps(parsed), [], pd.DataFrame())
-
-    # Step 2: Predict products
-    reactants_str = ".".join(reactant_smiles)
-    predictions = propose_products(reactants_str, reagents=parsed["reagents"], n_best=5)
-    product_smiles = [s for s, _ in predictions]
-    unique_products = get_unique_components(product_smiles)
-
-    for p in unique_products[:5]:
-        results_data.append({"Type": "Predicted Product", "Name": "-", "SMILES": p})
-    log_parts.append(f"Predicted {len(unique_products)} unique products")
-
-    # Step 3: Find references
-    all_species = reactant_smiles + unique_products
-    refs = load_references(all_species)
-
-    for ref in refs:
-        results_data.append({"Type": "Reference Found", "Name": ref["name"], "SMILES": ref["smiles"]})
-
-    ref_images = render_reference_pngs(refs, limit=6)
-    log_parts.append(f"Found {len(refs)} reference spectra")
-
-    # Step 4: Quantify if mixture provided
-    mixture = parse_csv(mixture_csv)
-    if mixture["ppm"] and refs:
-        try:
-            result = deconvolve_spectra(
-                mixture_ppm=mixture["ppm"],
-                mixture_intensity=mixture["intensity"],
-                refs=refs,
-                quiet=True
-            )
-            conc = result.get("concentrations", {})
+        # Format result summary
+        if "error" in result:
+            result_str = f"Error: {result['error']}"
+        elif "smiles" in result and "all_matches" not in result:
+            result_str = f"SMILES: {result['smiles']}"
+        elif "all_matches" in result:
+            result_str = f"SMILES: {result['smiles']}"
+        elif "predictions" in result:
+            unique = result.get('unique_products', [])
+            result_str = f"{len(unique)} products: {', '.join(unique[:3])}{'...' if len(unique) > 3 else ''}"
+        elif "found" in result:
+            result_str = f"Found {result['found']} refs, missing {len(result.get('missing', []))}"
+        elif "concentrations" in result:
+            conc = result["concentrations"]
             if conc:
-                quant_df = pd.DataFrame([
-                    {"Component": k, "Proportion": f"{v:.4f}"}
-                    for k, v in sorted(conc.items(), key=lambda x: -x[1])
-                ])
-                log_parts.append("Quantification complete")
+                top = sorted(conc.items(), key=lambda x: -x[1])[:3]
+                result_str = ", ".join(f"{k}: {v:.2%}" for k, v in top)
+            else:
+                result_str = "No concentrations found"
+        else:
+            result_str = str(result)[:100]
+
+        lines.append(f"- `{tool}({args_str})` → {result_str}")
+
+    return "\n".join(lines)
+
+
+def chat_respond(
+    message: str,
+    history: List[Dict[str, str]],
+    model_name: str,
+    mixture_file
+) -> Tuple[List[Dict[str, str]], str, str]:
+    """
+    Handle a chat message with the agent.
+
+    Returns: (updated_history, tool_log, status)
+    """
+    if history is None:
+        history = []
+
+    if not message.strip():
+        return history, "", "Please enter a message."
+
+    if not os.environ.get("HF_TOKEN"):
+        return history, "", "HF_TOKEN not set. Please set it in your environment."
+
+    # Get agent and configure
+    agent = get_agent(model_name)
+
+    # Set mixture data if provided
+    if mixture_file is not None:
+        try:
+            mixture = parse_csv(mixture_file)
+            if mixture["ppm"]:
+                agent.set_mixture_data(mixture["ppm"], mixture["intensity"])
         except Exception as e:
-            log_parts.append(f"Quantification error: {e}")
+            pass  # Silently ignore CSV parse errors
 
-    # Generate narrative
-    parsing_method = "🤖 LLM" if parsed.get("llm_used") else "📝 Keyword matching"
-    narrative = f"""
-## Analysis Summary
+    # Run the agent
+    all_tool_calls = []
+    final_response = ""
 
-**Request:** {user_input}
+    try:
+        for response, tool_calls in agent.run(message):
+            final_response = response
+            all_tool_calls.extend(tool_calls)
+    except Exception as e:
+        final_response = f"Error: {str(e)}"
 
-**Parsing method:** {parsing_method}
-**Reactants identified:** {', '.join(parsed['reactants']) or 'None'}
-**Reagents/conditions:** {parsed['reagents'] or 'None specified'}
+    # Collect spectrum images from tool calls
+    spectrum_images = []
+    for tc in all_tool_calls:
+        result = tc.get("result", {})
+        # Single image from lookup_nmr_reference
+        if "spectrum_image" in result:
+            spectrum_images.append(result["spectrum_image"])
+        # Multiple images from load_references_for_smiles
+        if "spectrum_images" in result:
+            spectrum_images.extend(result["spectrum_images"])
 
-**Products predicted:** {len(unique_products)} unique structures
-**References found:** {len(refs)} compounds in database
+    # Update history using messages format (Gradio 5.x)
+    # Add user message and text response first
+    history = list(history) + [
+        {"role": "user", "content": message},
+        {"role": "assistant", "content": final_response}
+    ]
+    
+    # Add spectrum images as separate assistant messages
+    # Gradio 5.x format for files: {"path": "...", "alt_text": "..."}
+    for img_path in spectrum_images:
+        history.append({
+            "role": "assistant", 
+            "content": {"path": img_path, "alt_text": "NMR Spectrum"}
+        })
 
-{"**Quantification:** Complete - see results table" if not quant_df.empty else "**Quantification:** No mixture data provided"}
-"""
+    # Format tool log
+    tool_log = format_tool_calls(all_tool_calls)
 
-    results_df = pd.DataFrame(results_data)
-    status = "Analysis complete" if results_data else "No results"
+    status = f"Completed with {len(all_tool_calls)} tool calls" if all_tool_calls else "Completed"
 
-    return (status, narrative, results_df, json.dumps(parsed, indent=2), ref_images, quant_df)
+    return history, tool_log, status
+
+
+def clear_chat(model_name: str) -> Tuple[List[Dict[str, str]], str, str]:
+    """Clear the chat and agent state."""
+    agent = get_agent(model_name)
+    agent.clear_state()
+    return [], "", "Chat cleared"
+
+
+def save_session(model_name: str) -> str:
+    """Export the current session as JSON and return the file path."""
+    agent = get_agent(model_name)
+    session_data = agent.export_session()
+    
+    # Save to temp file
+    from datetime import datetime
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"session_{timestamp}.json"
+    filepath = os.path.join(tempfile.mkdtemp(), filename)
+    
+    with open(filepath, "w") as f:
+        json.dump(session_data, f, indent=2, default=str)
+    
+    return filepath
 
 
 # ----------------------------
@@ -489,57 +394,93 @@ with gr.Blocks(title="NMR Chemistry Analysis") as demo:
     gr.Markdown("# NMR Chemistry Analysis\nLLM-enhanced tools for reaction prediction and mixture quantification.")
 
     with gr.Tabs():
-        # ============ TAB 1: LLM Agent Analysis ============
-        with gr.Tab("🤖 LLM Agent Analysis"):
+        # ============ TAB 1: LLM Agent Chat ============
+        with gr.Tab("Agent Chat"):
             gr.Markdown("""
-            ### Natural Language Chemistry Analysis
-            Describe your chemistry problem in plain English. The agent will:
-            1. **Parse** your request using an LLM to identify reactants and conditions
-            2. **Predict** reaction products using ReactionT5
-            3. **Find** NMR reference spectra in the database
-            4. **Quantify** your mixture (if spectrum provided)
+            ### Autonomous Chemistry Agent
+            Chat with an LLM agent that can autonomously:
+            - Resolve chemical names to SMILES
+            - Predict reaction products
+            - Look up NMR reference spectra
+            - Quantify mixture compositions
 
-            *Requires `HF_TOKEN` environment variable for LLM parsing.*
+            The agent decides which tools to use based on your request.
+
+            *Requires `HF_TOKEN` environment variable.*
             """)
 
             with gr.Row():
                 with gr.Column(scale=2):
-                    llm_input = gr.Textbox(
-                        label="Describe your chemistry request",
-                        placeholder="Example: I'm brominating anisole with Br2 and FeBr3 catalyst. What products should I expect?",
-                        lines=3
+                    chatbot = gr.Chatbot(
+                        label="Chat",
+                        height=400,
+                        type="messages",
                     )
-                    llm_mixture = gr.File(label="Upload mixture NMR spectrum (CSV: ppm, intensity)", file_types=[".csv"])
-                    llm_model = gr.Dropdown(
-                        choices=LLM_MODELS,
-                        value=LLM_MODELS[0],
-                        label="LLM Model"
-                    )
-                    llm_btn = gr.Button("🚀 Run LLM Analysis", variant="primary")
+
+                    with gr.Row():
+                        chat_input = gr.Textbox(
+                            label="Your message",
+                            placeholder="Example: What products do I get from brominating anisole with Br2 and FeBr3?",
+                            lines=2,
+                            scale=4,
+                        )
+                        send_btn = gr.Button("Send", variant="primary", scale=1)
+
+                    with gr.Row():
+                        mixture_upload = gr.File(
+                            label="Upload mixture spectrum (CSV: ppm, intensity)",
+                            file_types=[".csv"],
+                        )
+                        model_dropdown = gr.Dropdown(
+                            choices=LLM_MODELS,
+                            value=LLM_MODELS[2],  # DeepSeek V3 as default
+                            label="LLM Model",
+                        )
+                    
+                    with gr.Row():
+                        clear_btn = gr.Button("Clear Chat", variant="secondary")
 
                 with gr.Column(scale=1):
-                    llm_status = gr.Textbox(label="Status", interactive=False)
+                    chat_status = gr.Textbox(label="Status", interactive=False)
                     hf_token_status = gr.Markdown(
-                        f"**HF_TOKEN:** {'✅ Set' if os.environ.get('HF_TOKEN') else '❌ Not set (fallback to keyword parsing)'}"
+                        f"**HF_TOKEN:** {'Set' if os.environ.get('HF_TOKEN') else 'Not set'}"
                     )
+                    tool_log = gr.Markdown(label="Tool Calls")
+                    save_btn = gr.DownloadButton("💾 Save Session", variant="secondary")
 
-            llm_narrative = gr.Markdown(label="Analysis Narrative")
+            # Event handlers
+            send_btn.click(
+                chat_respond,
+                inputs=[chat_input, chatbot, model_dropdown, mixture_upload],
+                outputs=[chatbot, tool_log, chat_status],
+            ).then(
+                lambda: "",
+                outputs=[chat_input],
+            )
 
-            with gr.Row():
-                llm_results = gr.Dataframe(label="Results", interactive=False)
-                llm_quant = gr.Dataframe(label="Quantification", interactive=False)
+            chat_input.submit(
+                chat_respond,
+                inputs=[chat_input, chatbot, model_dropdown, mixture_upload],
+                outputs=[chatbot, tool_log, chat_status],
+            ).then(
+                lambda: "",
+                outputs=[chat_input],
+            )
 
-            llm_gallery = gr.Gallery(label="Reference Spectra", columns=3, height=300)
-            llm_workflow = gr.Code(label="Parsed Request (JSON)", language="json")
-
-            llm_btn.click(
-                run_llm_analysis,
-                inputs=[llm_input, llm_mixture, llm_model],
-                outputs=[llm_status, llm_narrative, llm_results, llm_workflow, llm_gallery, llm_quant]
+            clear_btn.click(
+                clear_chat,
+                inputs=[model_dropdown],
+                outputs=[chatbot, tool_log, chat_status],
+            )
+            
+            save_btn.click(
+                save_session,
+                inputs=[model_dropdown],
+                outputs=[save_btn],
             )
 
         # ============ TAB 2: Manual Deconvolution ============
-        with gr.Tab("🧪 Manual Deconvolution"):
+        with gr.Tab("Manual Deconvolution"):
             gr.Markdown("""
             ### Step-by-Step Analysis
             Control each step of the analysis pipeline manually.
@@ -595,7 +536,7 @@ with gr.Blocks(title="NMR Chemistry Analysis") as demo:
             )
 
         # ============ TAB 3: Time-Series ============
-        with gr.Tab("📈 Time-Series Analysis"):
+        with gr.Tab("Time-Series Analysis"):
             gr.Markdown("""
             ### Reaction Kinetics
             Track component concentrations over time using multiple NMR spectra.
@@ -607,7 +548,7 @@ with gr.Blocks(title="NMR Chemistry Analysis") as demo:
             """)
 
             if not _HAS_MAGNETSTEIN:
-                gr.Markdown("⚠️ **Note:** Magnetstein not available. Time-series analysis requires the magnetstein module.")
+                gr.Markdown("**Note:** Magnetstein not available. Time-series analysis requires the magnetstein module.")
 
             series_species = gr.Textbox(
                 label="Species to track (comma-separated)",

@@ -4,6 +4,10 @@ from typing import Dict, List, Optional, Tuple
 
 import pandas as pd
 from rdkit import Chem
+from rdkit import RDLogger
+
+# Suppress RDKit warnings for invalid SMILES parsing
+RDLogger.DisableLog('rdApp.*')
 
 # ----------------------------
 # Logging (quiet by default)

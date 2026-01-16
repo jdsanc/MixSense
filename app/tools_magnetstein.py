@@ -37,7 +37,7 @@ def quantify_single(
     library: List[Dict[str, List[float]]],  # [{"name":..., "ppm":[...], "intensity":[...]}]
     kappa_mixture: float = 0.25,
     kappa_components: float = 0.22,
-    min_peaks: int = 5,
+    min_peaks: int = 1,
 ) -> Dict:
     """
     Return {"concentrations": {name: value, ...}, "reconstructed": {"ppm": [...], "intensity": [...]}}
