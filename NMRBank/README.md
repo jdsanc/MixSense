@@ -1,3 +1,7 @@
+---
+license: mit
+---
+
 ## 1. NMRBank data (225809)
 
 We batch processed 380,220 NMR segments using NMRExtractor. After removing entries with empty 13C NMR chemical shifts, we obtained about 260,000 entries. Further filtering out entries with empty IUPAC names and NMR chemical shifts resulted in 225,809 entries. 

@@ -1,3 +1,6 @@
 [submodule "magnetstein"]
 	path = magnetstein
 	url = https://github.com/BDomzal/magnetstein.git
+[submodule "nmr-to-structure"]
+	path = nmr-to-structure
+	url = https://github.com/rxn4chemistry/nmr-to-structure.git
