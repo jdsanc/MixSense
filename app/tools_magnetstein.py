@@ -14,7 +14,7 @@ import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'magnetstein'))
 
 try:
-    from masserstein import Spectrum
+    from masserstein.nmr_spectrum import NMRSpectrum
     from masserstein.deconv_simplex import estimate_proportions, estimate_proportions_in_time
     from pulp import LpSolverDefault
     _HAS_MAGNETSTEIN = True
@@ -37,6 +37,7 @@ def quantify_single(
     library: List[Dict[str, List[float]]],  # [{"name":..., "ppm":[...], "intensity":[...]}]
     kappa_mixture: float = 0.25,
     kappa_components: float = 0.22,
+    min_peaks: int = 1,
 ) -> Dict:
     """
     Return {"concentrations": {name: value, ...}, "reconstructed": {"ppm": [...], "intensity": [...]}}
@@ -46,13 +47,24 @@ def quantify_single(
 
     # Create mixture spectrum
     mix_x, mix_y = _to_numpy(mixture_ppm, mixture_intensity)
-    
+
     if len(mix_x) == 0:
         raise ValueError("No valid (non-negative) ppm values found in mixture spectrum")
     
-    mix_confs = list(zip(mix_x, mix_y))
-    mixture_spectrum = Spectrum(confs=mix_confs)
+    if len(mix_x) < min_peaks:
+        raise ValueError(
+            f"Mixture spectrum has only {len(mix_x)} data points. "
+            f"Magnetstein requires at least {min_peaks} peaks for reliable deconvolution. "
+            f"Please provide denser NMR spectra."
+        )
     
+    # Check for zero intensity sum
+    if np.sum(mix_y) <= 0:
+        raise ValueError("Mixture spectrum has zero or negative total intensity.")
+
+    mix_confs = list(zip(mix_x, mix_y))
+    mixture_spectrum = NMRSpectrum(confs=mix_confs, protons=1)
+
     # Create library spectra
     query_spectra = []
     names = []
@@ -61,26 +73,46 @@ def quantify_single(
         if len(x) == 0:
             print(f"Warning: Skipping component {comp['name']} - no valid ppm values")
             continue
+        if len(x) < min_peaks:
+            raise ValueError(
+                f"Reference spectrum for '{comp['name']}' has only {len(x)} peaks. "
+                f"Magnetstein requires at least {min_peaks} peaks. "
+                f"Please use references with more complete spectra."
+            )
+        # Check for zero intensity sum
+        if np.sum(y) <= 0:
+            raise ValueError(f"Reference spectrum '{comp['name']}' has zero or negative total intensity.")
         comp_confs = list(zip(x, y))
-        query_spectra.append(Spectrum(confs=comp_confs))
+        # Use protons from library if available, default to 1
+        protons = comp.get("protons", 1)
+        query_spectra.append(NMRSpectrum(confs=comp_confs, protons=protons))
         names.append(comp["name"])
     
     if len(query_spectra) == 0:
         raise ValueError("No valid library spectra found")
 
     # Call magnetstein with default solver (CBC instead of Gurobi)
-    res = estimate_proportions(
-        spectrum=mixture_spectrum,
-        query=query_spectra,
-        MTD=kappa_mixture,
-        MTD_th=kappa_components,
-        verbose=False,
-        solver=LpSolverDefault  # Use default solver (CBC)
-    )
+    try:
+        res = estimate_proportions(
+            spectrum=mixture_spectrum,
+            query=query_spectra,
+            MTD=kappa_mixture,
+            MTD_th=kappa_components,
+            verbose=False,
+            solver=LpSolverDefault  # Use default solver (CBC)
+        )
+    except ZeroDivisionError:
+        raise ValueError(
+            "Deconvolution failed due to numerical issues. This usually happens when:\n"
+            "1. Spectra have too few data points (need at least 5+ peaks)\n"
+            "2. Reference spectra don't overlap with mixture spectrum\n"
+            "3. All component proportions are near zero\n"
+            "Please check your input data."
+        )
 
-    # Extract results
-    proportions = res[0]  # First element is the proportions array
-    conc = {names[i]: float(proportions[i]) for i in range(len(names))}
+    # Extract results - res is a dict with "proportions" key
+    proportions = res.get("proportions", res.get("probs", []))
+    conc = {names[i]: float(proportions[i]) for i in range(len(names)) if i < len(proportions)}
     
     # For reconstruction, we'll use the mixture spectrum as is
     # (magnetstein doesn't return reconstruction in this API)
@@ -94,6 +126,7 @@ def quantify_timeseries(
     library: List[Dict[str, List[float]]],
     kappa_mixture: float = 0.25,
     kappa_components: float = 0.22,
+    min_peaks: int = 5,
 ) -> Dict:
     """
     Return {"times": [...], "proportions": {name: [..series..], "contamination": [...]}}
@@ -103,17 +136,28 @@ def quantify_timeseries(
 
     # Create mixture spectra for each time point
     mixture_spectra = []
+    valid_times = []
     for i, m in enumerate(mixtures):
         x, y = _to_numpy(m["ppm"], m["intensity"])
         if len(x) == 0:
             print(f"Warning: Skipping time point {i} - no valid ppm values")
             continue
+        if len(x) < min_peaks:
+            raise ValueError(
+                f"Mixture spectrum at time point {i} has only {len(x)} data points. "
+                f"Magnetstein requires at least {min_peaks} peaks for reliable deconvolution. "
+                f"Please provide denser NMR spectra."
+            )
+        # Check for zero intensity sum
+        if np.sum(y) <= 0:
+            raise ValueError(f"Mixture spectrum at time point {i} has zero or negative total intensity.")
         mix_confs = list(zip(x, y))
-        mixture_spectra.append(Spectrum(confs=mix_confs))
-    
+        mixture_spectra.append(NMRSpectrum(confs=mix_confs, protons=1))
+        valid_times.append(times[i] if i < len(times) else i)
+
     if len(mixture_spectra) == 0:
         raise ValueError("No valid mixture spectra found")
-    
+
     # Create library spectra
     reagents_spectra = []
     names = []
@@ -122,38 +166,58 @@ def quantify_timeseries(
         if len(x) == 0:
             print(f"Warning: Skipping component {comp.get('name', 'unknown')} - no valid ppm values")
             continue
+        if len(x) < min_peaks:
+            raise ValueError(
+                f"Reference spectrum for '{comp.get('name', 'unknown')}' has only {len(x)} peaks. "
+                f"Magnetstein requires at least {min_peaks} peaks. "
+                f"Please use references with more complete spectra."
+            )
+        # Check for zero intensity sum
+        if np.sum(y) <= 0:
+            raise ValueError(f"Reference spectrum '{comp.get('name', 'unknown')}' has zero or negative total intensity.")
         comp_confs = list(zip(x, y))
-        reagents_spectra.append(Spectrum(confs=comp_confs))
+        protons = comp.get("protons", 1)
+        reagents_spectra.append(NMRSpectrum(confs=comp_confs, protons=protons))
         names.append(comp.get("name", f"comp_{len(names)}"))
     
     if len(reagents_spectra) == 0:
         raise ValueError("No valid library spectra found")
 
     # Call magnetstein timeseries function with default solver
-    res = estimate_proportions_in_time(
-        mixture_in_time=mixture_spectra,
-        reagents_spectra=reagents_spectra,
-        MTD=kappa_mixture,
-        MTD_th=kappa_components,
-        verbose=False,
-        solver=LpSolverDefault  # Use default solver (CBC)
-    )
+    try:
+        res = estimate_proportions_in_time(
+            mixture_in_time=mixture_spectra,
+            reagents_spectra=reagents_spectra,
+            MTD=kappa_mixture,
+            MTD_th=kappa_components,
+            verbose=False,
+            solver=LpSolverDefault  # Use default solver (CBC)
+        )
+    except ZeroDivisionError:
+        raise ValueError(
+            "Deconvolution failed due to numerical issues. This usually happens when:\n"
+            "1. Spectra have too few data points (need at least 5+ peaks)\n"
+            "2. Reference spectra don't overlap with mixture spectrum\n"
+            "3. All component proportions are near zero\n"
+            "Please check your input data."
+        )
 
     # Extract results - res is a dictionary with proportions_in_time
     proportions_in_time = res['proportions_in_time']  # This is a list of lists
-    out = {"times": times, "proportions": {}}
+    out = {"times": valid_times, "proportions": {}}
     
     # Convert proportions array to dictionary format
     # proportions_in_time structure: [time0[comp0, comp1, ...], time1[comp0, comp1, ...], ...]
     # Each time point has proportions for all components
+    n_timepoints = len(proportions_in_time)
     for i, name in enumerate(names):
-        if i < len(proportions_in_time[0]):  # Check if component exists
+        if n_timepoints > 0 and i < len(proportions_in_time[0]):
             # Extract proportions for this component across all time points
-            out["proportions"][name] = [float(proportions_in_time[j][i]) for j in range(len(times))]
+            out["proportions"][name] = [float(proportions_in_time[j][i]) for j in range(n_timepoints)]
         else:
-            out["proportions"][name] = [0.0] * len(times)
+            out["proportions"][name] = [0.0] * n_timepoints
     
     # Add contamination if available (magnetstein may not provide this)
-    out["proportions"]["contamination"] = [0.0] * len(times)
+    out["proportions"]["contamination"] = [0.0] * n_timepoints
     
     return out

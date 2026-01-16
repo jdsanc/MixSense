@@ -5,6 +5,10 @@ import os
 import sys
 from pathlib import Path
 from rdkit import Chem
+from rdkit import RDLogger
+
+# Suppress RDKit warnings for invalid SMILES parsing
+RDLogger.DisableLog('rdApp.*')
 
 # Add the reactants_to_products module to path
 sys.path.append(str(Path(__file__).parent.parent))
@@ -21,7 +25,7 @@ except ImportError as e:
     LOCAL_MODEL_AVAILABLE = False
     print(f"Local model not available, will use API: {e}")
 
-API_URL = "https://api-inference.huggingface.co/models/sagawa/ReactionT5v2-forward"
+API_URL = "https://router.huggingface.co/hf-inference/models/sagawa/ReactionT5v2-forward"
 headers = {
     "Authorization": f"Bearer {os.environ.get('HF_TOKEN', '')}",
 }
@@ -51,6 +55,9 @@ def propose_products(reactants: str, reagents: str = "", beams=10, n_best=5, max
     Enhanced with water balancing for ester formation reactions.
     Input format: 'REACTANT_SMILES . REACTANT_SMILES' for reactants
     """
+    # Handle None n_best - default to beams count
+    if n_best is None:
+        n_best = beams
     
     # Try local model first
     if LOCAL_MODEL_AVAILABLE:
@@ -161,3 +168,84 @@ def get_unique_components(predictions: List[str]) -> List[str]:
                     seen.add(component)
                     components.append(component)
         return components
+
+
+# -----------------
+# Name -> SMILES utility (exposed via this module so callers can "use tools_reactiont5")
+# -----------------
+def resolve_names_to_smiles(text: str) -> List[str]:
+    """
+    Convert a comma/semicolon separated list of chemical names or SMILES into
+    canonical SMILES. Tries in order:
+      1) explicit SMILES (canonicalize with RDKit)
+      2) local utility normalize_chemical_names (OPSIN/PubChem helpers)
+      3) tiny built-in map for a few common names
+    Returns unique canonical SMILES preserving order.
+    """
+    parts = [p.strip() for p in (text or "").replace(";", ",").split(",") if p.strip()]
+    out: List[str] = []
+    seen = set()
+
+    # Try to import the richer resolver if available
+    try:
+        from reactants_to_products.utils import normalize_chemical_names
+
+        resolved = normalize_chemical_names(text)
+        for s in resolved:
+            if s not in seen:
+                seen.add(s)
+                out.append(s)
+        if out:
+            return out
+    except Exception:
+        pass
+
+    fallback_map = {
+        # Common aromatics
+        "anisole": "COc1ccccc1",
+        "benzene": "c1ccccc1",
+        "toluene": "Cc1ccccc1",
+        "phenol": "Oc1ccccc1",
+        "bromobenzene": "Brc1ccccc1",
+        # Bromoanisole products
+        "p-bromoanisole": "COc1ccc(Br)cc1",
+        "4-bromoanisole": "COc1ccc(Br)cc1",
+        "para-bromoanisole": "COc1ccc(Br)cc1",
+        "o-bromoanisole": "COc1ccccc1Br",
+        "2-bromoanisole": "COc1ccccc1Br",
+        "ortho-bromoanisole": "COc1ccccc1Br",
+        # Terpenes
+        "alpha-pinene": "CC1=CCC2CC1C2(C)C",
+        "α-pinene": "CC1=CCC2CC1C2(C)C",
+        "pinene": "CC1=CCC2CC1C2(C)C",
+        # Esters
+        "benzyl benzoate": "O=C(OCc1ccccc1)c2ccccc2",
+        # Reagents
+        "br2": "BrBr",
+        "bromine": "BrBr",
+        "febr3": "Br[Fe](Br)Br",
+        "iron(iii) bromide": "Br[Fe](Br)Br",
+        "iron tribromide": "Br[Fe](Br)Br",
+    }
+
+    for tok in parts:
+        can = None
+        try:
+            m = Chem.MolFromSmiles(tok)
+            if m:
+                can = Chem.MolToSmiles(m, canonical=True)
+        except Exception:
+            can = None
+        if can is None:
+            can = fallback_map.get(tok.lower())
+            if can:
+                try:
+                    m = Chem.MolFromSmiles(can)
+                    can = Chem.MolToSmiles(m, canonical=True) if m else None
+                except Exception:
+                    can = None
+        if can and can not in seen:
+            seen.add(can)
+            out.append(can)
+
+    return out

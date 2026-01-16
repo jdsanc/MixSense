@@ -3,23 +3,23 @@
 Deconvolve an NMR mixture against component spectra using Masserstein + Gurobi.
 
 Usage (CSV):
-  python tool_deconvolve_nmr.py preprocessed_mix.csv preprocessed_comp0.csv preprocessed_comp1.csv \
+  python deconvolve_nmr.py preprocessed_mix.csv preprocessed_comp0.csv preprocessed_comp1.csv \
       --protons 16 12 --names Pinene "Benzyl benzoate"
 
 Usage (Mnova TSV export):
-  python tool_deconvolve_nmr.py mix.tsv comp0.tsv comp1.tsv --protons 16 12 --mnova
+  python deconvolve_nmr.py mix.tsv comp0.tsv comp1.tsv --protons 16 12 --mnova
 """
 
 import os, sys, argparse, pathlib, json
 import numpy as np
 
+# Keep BLAS from oversubscribing threads
 def set_thread_env(n):
-    """Keep BLAS from oversubscribing threads."""
     for k in ["OMP_NUM_THREADS","MKL_NUM_THREADS","OPENBLAS_NUM_THREADS","NUMEXPR_NUM_THREADS"]:
         os.environ.setdefault(k, str(n))
 
 def detect_delim(path: str, default=","):
-    """Heuristic: .tsv -> '\t'; else sniff first line for a tab; else comma."""
+    # Heuristic: .tsv -> '\t'; else sniff first line for a tab; else comma
     p = pathlib.Path(path)
     if p.suffix.lower() == ".tsv":
         return "\t"
@@ -31,9 +31,10 @@ def detect_delim(path: str, default=","):
         return default
 
 def load_xy(path, delimiter=None, mnova=False):
-    """Load two-column spectrum file (ppm, intensity)."""
+    # Mnova exports are typically TSV with first two columns ppm,intensity
     if delimiter is None:
         delimiter = "\t" if mnova else detect_delim(path, default="," if not mnova else "\t")
+    # Always take first two columns
     arr = np.loadtxt(path, delimiter=delimiter, usecols=[0,1])
     if arr.ndim != 2 or arr.shape[1] < 2:
         raise ValueError(f"{path}: expected two numeric columns (ppm,intensity)")
@@ -61,58 +62,61 @@ def main():
     ap.add_argument("--quiet", action="store_true", help="Less solver chatter")
     args = ap.parse_args()
 
+    # Threads for BLAS stacks
     set_thread_env(args.threads)
 
+    # Optional license file for this run
     if args.license_file:
         os.environ["GRB_LICENSE_FILE"] = args.license_file
 
-    # Gurobi sanity check
+    # Gurobi sanity check (optional but nice)
     try:
         import gurobipy as gp
         gp.setParam("LogToConsole", 0)
+        # Don't force WLS here; assume license is already configured
         _m = gp.Model()
         _m.Params.LogToConsole = 0
-    except Exception:
+    except Exception as e:
         print("ERROR: Gurobi not ready. Make sure your license is configured.", file=sys.stderr)
         raise
 
-    # Masserstein import
+    # Masserstein
     try:
         from masserstein import NMRSpectrum, estimate_proportions
-    except ImportError:
+    except Exception:
         print("ERROR: Could not import 'masserstein'. Install it in this environment.", file=sys.stderr)
         raise
 
-    # Load data
+    # Load mixture + components
     mix_arr = load_xy(args.mixture, mnova=args.mnova)
     comp_arrays = [load_xy(p, mnova=args.mnova) for p in args.components]
 
+    # Names
     n = len(comp_arrays)
     names = args.names if args.names and len(args.names) == n else [f"comp{i}" for i in range(n)]
     if args.names and len(args.names) != n:
         print("WARNING: --names length does not match number of components; using default names.", file=sys.stderr)
 
+    # Proton counts
     if args.protons and len(args.protons) != n:
         print("ERROR: --protons length must equal number of components.", file=sys.stderr)
         sys.exit(2)
     protons = args.protons if args.protons else [1]*n
     if not args.protons:
-        print("NOTE: No --protons provided; assuming 1 for each component.", file=sys.stderr)
+        print("NOTE: No --protons provided; assuming 1 for each component (relative scaling may be off).", file=sys.stderr)
 
-    # Build spectrum objects
+    # Build NMRSpectrum objects and preprocess
     mix = NMRSpectrum(confs=list(zip(mix_arr[:,0], mix_arr[:,1])))
     spectra = []
     for i, arr in enumerate(comp_arrays):
         spectra.append(NMRSpectrum(confs=list(zip(arr[:,0], arr[:,1])), protons=protons[i]))
 
-    # Normalize
-    mix.trim_negative_intensities()
-    mix.normalize()
+    # Trim negatives & normalize
+    mix.trim_negative_intensities(); mix.normalize()
     for sp in spectra:
-        sp.trim_negative_intensities()
-        sp.normalize()
+        sp.trim_negative_intensities(); sp.normalize()
 
-    # Solver setup
+    # Gurobi via PuLP (fast defaults)
     from pulp import GUROBI
     method_map = {"auto":0, "primal":1, "dual":2, "barrier":3}
     solver_kwargs = dict(
@@ -137,10 +141,11 @@ def main():
         solver=solver
     )
 
+    # Convert numpy scalars to plain Python for clean JSON/text
     props = [float(p) for p in result.get("proportions", [])]
     wd = float(result.get("Wasserstein distance", np.nan))
 
-    # Output
+    # Pretty text table
     print("\nEstimated proportions:")
     width = max(len(s) for s in names) + 2
     for name, val in zip(names, props):
@@ -148,7 +153,8 @@ def main():
     print(f"\nWasserstein distance: {wd:.12f}")
 
     if args.json:
-        out = {"proportions": dict(zip(names, props)), "Wasserstein distance": wd}
+        out = {"proportions": dict(zip(names, props)),
+               "Wasserstein distance": wd}
         print("\nJSON:", json.dumps(out))
 
 if __name__ == "__main__":
