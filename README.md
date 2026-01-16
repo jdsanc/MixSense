@@ -4,6 +4,12 @@ NMR (Nuclear Magnetic Resonance) chemistry analysis platform. Provides tools for
 
 ## Quick Start
 
+### Install Dependencies
+```bash
+conda env create -f environment.yml -n mixsense
+conda activate mixsense
+```
+
 ### Run the Gradio UI
 ```bash
 python -m app.gradio_llm_app
@@ -74,7 +80,7 @@ Web interface with:
 | Variable | Purpose |
 |----------|---------|
 | `HF_TOKEN` | HuggingFace API token (required for LLM agent) |
-| `GRB_LICENSE_FILE` | Gurobi license file path |
+| `GRB_LICENSE_FILE` | [Gurobi license](https://www.gurobi.com/academia/academic-program-and-licenses/) file path |
 | `NMRBANK_CSV` | Override NMRBank CSV location |
 | `NMRBANK_SKIP_LOAD_FOR_TESTS` | Set to `1` to skip CSV load in tests |
 
