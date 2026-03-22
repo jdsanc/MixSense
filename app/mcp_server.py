@@ -101,8 +101,6 @@ def deconvolve_mixture(
     mixture_ppm: List[float],
     mixture_intensity: List[float],
     references: List[Dict[str, Any]],
-    threads: int = 8,
-    time_limit: int = 300
 ) -> Dict[str, Any]:
     """
     Deconvolve an NMR mixture spectrum into component contributions.
@@ -111,13 +109,11 @@ def deconvolve_mixture(
         mixture_ppm: PPM values of mixture spectrum
         mixture_intensity: Intensity values of mixture spectrum
         references: List of reference spectra, each with keys: name, ppm, intensity
-        threads: Number of solver threads (default: 8)
-        time_limit: Solver time limit in seconds (default: 300)
 
     Returns:
-        Dictionary with component concentrations and solver output.
+        Dictionary with component concentrations.
     """
-    from app.tools_deconvolve import deconvolve_spectra
+    from app.tools_magnetstein import quantify_single
 
     if not mixture_ppm or not mixture_intensity:
         return {"error": "Empty mixture data"}
@@ -125,18 +121,14 @@ def deconvolve_mixture(
     if not references:
         return {"error": "No reference spectra provided"}
 
-    result = deconvolve_spectra(
+    result = quantify_single(
         mixture_ppm=mixture_ppm,
         mixture_intensity=mixture_intensity,
-        refs=references,
-        threads=threads,
-        time_limit=time_limit,
-        quiet=True,
+        library=references,
     )
 
     return {
         "concentrations": result.get("concentrations", {}),
-        "wasserstein_distance": result.get("raw", {}).get("Wasserstein distance"),
     }
 
 

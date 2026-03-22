@@ -512,8 +512,8 @@ with gr.Blocks(title="NMR Chemistry Analysis") as demo:
             with gr.Row():
                 mixture_csv = gr.File(label="Mixture CSV (ppm, intensity)", file_types=[".csv"])
                 backend = gr.Dropdown(
-                    choices=["Masserstein"] + (["Magnetstein"] if _HAS_MAGNETSTEIN else []),
-                    value="Masserstein",
+                    choices=(["Magnetstein"] if _HAS_MAGNETSTEIN else []) + ["Masserstein"],
+                    value="Magnetstein" if _HAS_MAGNETSTEIN else "Masserstein",
                     label="Backend"
                 )
 

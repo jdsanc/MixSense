@@ -10,8 +10,8 @@ import numpy as np
 import sys
 import os
 
-# Add magnetstein to path
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'magnetstein'))
+# Insert magnetstein/ at the front so its masserstein/ shadows the PyPI masserstein package
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'magnetstein')))
 
 try:
     from magnetstein.masserstein.nmr_spectrum import NMRSpectrum

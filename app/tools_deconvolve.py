@@ -85,10 +85,9 @@ def deconvolve_spectra(
     names: Optional[List[str]] = None,
     protons: Optional[List[int]] = None,
     threads: int = 8,
-    time_limit: int = 300,
     quiet: bool = True,
 ) -> Dict[str, Any]:
-    """Run Masserstein deconvolution and return concentrations.
+    """Run Magnetstein deconvolution and return concentrations.
 
     refs: list of { name, ppm, intensity, [protons] }
     """
@@ -98,22 +97,6 @@ def deconvolve_spectra(
         script_path = os.path.abspath(
             os.path.join(os.path.dirname(__file__), "tool_deconvolve_nmr.py")
         )
-    # Discover Gurobi license file
-    # Priority: explicit env → alternative env → common repo paths
-    license_path: Optional[str] = None
-    cand_env = os.environ.get("GRB_LICENSE_FILE") or os.environ.get("DECONVOLVE_LICENSE_FILE")
-    if cand_env and os.path.exists(cand_env):
-        license_path = cand_env
-    else:
-        repo_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-        candidates = [
-            os.path.join(repo_dir, "magnetstein", "masserstein", "gurobi.lic"),
-            os.path.join(repo_dir, "magnetstein", "gurobi.lic"),
-        ]
-        for p in candidates:
-            if os.path.exists(p):
-                license_path = p
-                break
 
     # Ensure names/protons lists
     n = len(refs or [])
@@ -145,12 +128,8 @@ def deconvolve_spectra(
             *[str(nm) for nm in ref_names],
             "--threads",
             str(threads),
-            "--time-limit",
-            str(time_limit),
             "--json",
         ]
-        if license_path and os.path.exists(license_path):
-            cmd += ["--license-file", license_path]
         if quiet:
             cmd += ["--quiet"]
 

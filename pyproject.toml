@@ -16,7 +16,6 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "gradio>=6.9.0",
-    "gurobipy==12.0.3",
     "highspy>=1.13.1",
     "isospecpy==2.2.3",
     "masserstein==1.0.0",
