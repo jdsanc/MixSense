@@ -26,11 +26,6 @@ uv run python -m app.mcp_server
 # Exposes chemistry tools via Model Context Protocol
 ```
 
-### Run the Simple Agent (CLI)
-```bash
-uv run python -m app.simple_agent --reactants "anisole" "Br2" --reagents "FeBr3"
-```
-
 ### Run NMR Deconvolution CLI
 ```bash
 uv run python app/tool_deconvolve_nmr.py \

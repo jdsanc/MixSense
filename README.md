@@ -23,11 +23,6 @@ uv run python -m app.gradio_llm_app
 uv run python -m app.mcp_server
 ```
 
-### Run the CLI Agent
-```bash
-uv run python -m app.simple_agent --reactants "anisole" "Br2" --reagents "FeBr3"
-```
-
 ---
 
 ## Architecture
