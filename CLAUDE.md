@@ -43,14 +43,6 @@ uv run pytest tests/ -v
 NMRBANK_SKIP_LOAD_FOR_TESTS=1 uv run pytest tests/ -v
 ```
 
-### Run Evaluation
-```bash
-# Barebones eval (works without HF_TOKEN or IsoSpecPy)
-uv run python -m app.eval.eval_examples --verbose
-
-# Realistic eval with domain gap simulation
-uv run python -m app.eval.realistic_evaluation --difficulty medium
-```
 
 ## Architecture
 
@@ -68,11 +60,9 @@ Exposes chemistry tools via Model Context Protocol:
 
 **tools_reactiont5.py** - Product prediction using ReactionT5 model. Local model preferred, falls back to HuggingFace API.
 
-**tools_deconvolve.py** - Wrapper for Masserstein+Gurobi deconvolution.
+**tools_deconvolve.py** - Wrapper around the deconvolution CLI script.
 
-**tools_magnetstein.py** - Alternative quantification using magnetstein's optimal transport. Requires IsoSpecPy.
-
-**tools_asics.py** - R-based ASICS quantification.
+**tools_magnetstein.py** - Quantification using magnetstein's optimal transport (CBC solver, no license required).
 
 ### Simple Agent (app/simple_agent.py)
 Straightforward implementation that chains tools:
@@ -93,7 +83,6 @@ Web interface using tools directly.
 | Variable | Purpose |
 |----------|---------|
 | `HF_TOKEN` | HuggingFace API token (required for reaction prediction via API) |
-| `GRB_LICENSE_FILE` | Gurobi license file path |
 | `NMRBANK_CSV` | Override NMRBank CSV location |
 | `NMRBANK_SKIP_LOAD_FOR_TESTS` | Set to `1` to skip CSV load in tests |
 
@@ -112,4 +101,4 @@ Key packages:
 - IsoSpecPy, masserstein (for deconvolution)
 - mcp (for MCP server)
 - gradio (for web UI)
-- Gurobi optimizer (optional, for LP-based deconvolution)
+- pulp (CBC solver for deconvolution, no license required)
