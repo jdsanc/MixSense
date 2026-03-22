@@ -1,0 +1,327 @@
+\documentclass{article}
+
+
+
+\usepackage{arxiv}
+
+\usepackage[utf8]{inputenc} % allow utf-8 input
+\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage{hyperref}       % hyperlinks
+\usepackage{url}            % simple URL typesetting
+\usepackage{booktabs}       % professional-quality tables
+\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{nicefrac}       % compact symbols for 1/2, etc.
+\usepackage{microtype}      % microtypography
+\usepackage{lipsum}		% Can be removed after putting your text content
+\usepackage{graphicx}
+\usepackage{natbib}
+\usepackage{doi}\ce{}
+
+
+
+\title{An Autonomous LLM Agent Workflow for Automated NMR Mixture Analysis and Property Prediction}
+
+%\date{September 9, 1985}	% Here you can change the date presented in the paper title
+%\date{} 					% Or removing it
+
+\author{ \href{https://orcid.org/0000-0000-0000-0000}{\includegraphics[scale=0.06]{orcid.pdf}\hspace{1mm}David S.~Hippocampus}\thanks{Use footnote for providing further
+		information about author (webpage, alternative
+		address)---\emph{not} for acknowledging funding agencies.} \\
+	Department of Computer Science\\
+	Cranberry-Lemon University\\
+	Pittsburgh, PA 15213 \\
+	\texttt{hippo@cs.cranberry-lemon.edu} \\
+	%% examples of more authors
+	\And
+	\href{https://orcid.org/0000-0000-0000-0000}{\includegraphics[scale=0.06]{orcid.pdf}\hspace{1mm}Elias D.~Striatum} \\
+	Department of Electrical Engineering\\
+	Mount-Sheikh University\\
+	Santa Narimana, Levand \\
+	\texttt{stariate@ee.mount-sheikh.edu} \\
+	%% \AND
+	%% Coauthor \\
+	%% Affiliation \\
+	%% Address \\
+	%% \texttt{email} \\
+	%% \And
+	%% Coauthor \\
+	%% Affiliation \\
+	%% Address \\
+	%% \texttt{email} \\
+	%% \And
+	%% Coauthor \\
+	%% Affiliation \\
+	%% Address \\
+	%% \texttt{email} \\
+}
+
+% Uncomment to remove the date
+%\date{}
+
+% Uncomment to override  the `A preprint' in the header
+%\renewcommand{\headeright}{Technical Report}
+%\renewcommand{\undertitle}{Technical Report}
+\renewcommand{\shorttitle}{\textit{arXiv} Template}
+
+%%% Add PDF metadata to help others organize their library
+%%% Once the PDF is generated, you can check the metadata with
+%%% $ pdfinfo template.pdf
+\hypersetup{
+pdftitle={A template for the arxiv style},
+pdfsubject={q-bio.NC, q-bio.QM},
+pdfauthor={David S.~Hippocampus, Elias D.~Striatum},
+pdfkeywords={First keyword, Second keyword, More},
+}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+	\lipsum[1]
+\end{abstract}
+
+
+% keywords can be removed
+\keywords{First keyword \and Second keyword \and More}
+
+
+\begin{abstract}
+Automating reaction analysis remains a central challenge in chemical research due to the time, cost, and product losses associated with sample preparation and manual interpretation of spectra. We present \emph{MixSense}, an autonomous large language model (LLM) agent that integrates product prediction, spectral deconvolution, quantitative analysis, and property estimation into a single workflow. Given only a \ce{^1H}-NMR spectrum, \emph{MixSense} predicts plausible reaction products, deconvolves mixture spectra using simulated and reference libraries, and quantifies yields and purity of the resulting components. Extending beyond structural analysis, the framework incorporates SMILES-based prediction models for chemosensory properties, including compound-level flavor and odor profiles. This enables the simultaneous analysis of chemical composition and estimation of functional properties directly from raw spectral data. By eliminating the need for extensive purification and manual interpretation, \emph{MixSense} aims to accelerate the characterization of chemical reactions while reducing material losses and experimental overhead. Our preliminary results demonstrate the feasibility of LLM-driven, end-to-end analysis of chemical mixtures, highlighting the potential for autonomous agents to transform workflows in analytical chemistry and chemical discovery.
+\end{abstract}
+
+\section*{Introduction}
+
+Bottleneck: purification + manual interpretation = slow iteration
+Gap: No autonomous end-to-end mixture analysis from raw NMR
+Contribution: LLM-orchestrated pipeline integrating 4 capabilities
+The automated characterization of reaction outcomes is a longstanding bottleneck in synthesis: purification, reference collection, and manual interpretation of overlapping peaks impede iteration cycles and result in material losses \cite{dai2024autonomous, haas2023open}. We introduce \emph{MixSense}, an autonomous LLM agent that processes a single \textsuperscript{1}H NMR spectrum and produces end-to-end outputs comprising likely products, deconvolved component spectra, and quantitative composition. The framework supports time-series NMR data to monitor product evolution over time. We integrated a model for chemosensory property prediction \cite{2025zimmermann} to complement structure elucidation. The \emph{MixSense} toolkit encompasses mixture identification, mixture quantification and property prediction. 
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\linewidth]{figures/mixsense_workflow_cropped.png}
+    \caption{Overview of \emph{MixSense}: The system is composed of a module that  ingests \ce{^1H}-NMR spectra and routes them to task-specific modules for product hypothesis, spectral deconvolution, time-series quantification, and SMILES-based chemosensory property prediction.Input: NMR + reactants
+Pipeline: Product hypothesis -> Retrieval -> Alignment -> Deconvolution -> Quantification
+Output: Composition table + time evolution
+}
+    % \label{fig:mixsense_workflow}
+\end{figure}
+
+
+
+\section*{Methods}
+
+System architecture (Figure 1: flowchart from your hackathon)
+Component 1: Forward reaction prediction (ASKCOS or LLM-based)
+Component 2: Spectral retrieval/simulation (NMRShiftDB2, predictive models)
+Component 3: Alignment + NNLS deconvolution
+Component 4: Property prediction (brief mention)
+
+Test cases overview
+Evaluation metrics
+Baselines
+
+I suggest we introduce the eval methods with the results as we go, and not ntrodue the eval metrics in the methods section ; rather, focus on the tools we used
+
+\section*{Results}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\linewidth]{example-image-b}
+    \caption{
+(a)Performance comparison, 
+Bar plot: RMSE across 8 test cases (MixSense vs baselines) ; 
+Box plots showing distribution of errors
+}\label{fig:placeholder}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\linewidth]{example-image-b}
+    \caption{Case study walkthrough, Panel A: Raw mixture spectrum, Panel B: Deconvolved components overlaid, Panel C: Composition table with confidence}
+    \label{fig:placeholder}
+\end{figure}
+
+Figure 2: Performance comparison (RMSE across test cases, MixSense vs baselines)
+Figure 3: Case study (anisole reaction with overlaid spectra + composition table)
+Figure 4 (optional/supplementary): Time-series tracking or ablation study
+2-3 paragraphs interpreting results
+
+
+### Chemical Name Resolution
+Chemical names were converted to SMILES notation using RDKit's
+canonicalization combined with a curated lookup table for common
+reagents (n=XX compounds ??). Names not recognized were flagged for
+manual curation.
+
+### Reaction Product Prediction
+Reaction products were predicted using ReactionT5v2 [citation],
+a transformer-based model trained on the USPTO reaction dataset.
+For each reaction, the top-5 predictions were generated using
+beam search (beam width=10). Products were validated for chemical
+correctness using RDKit.
+
+### NMR Reference Spectra
+Reference ¹H NMR spectra were obtained from NMRBank [citation],
+a database of XX experimentally measured spectra. Compounds were
+matched by canonical SMILES. Peak positions (δ, ppm) and relative
+integrals were extracted.
+
+### Mixture Quantification
+Mixture spectra were deconvolved using optimal transport
+(Wasserstein distance minimization) as implemented in Magnetstein
+% [citation]. The algorithm finds coefficients cᵢ ≥ 0 that minimize:
+
+%     W₁(mixture, Σ cᵢ × referenceᵢ)
+
+% subject to Σ cᵢ = 1.
+
+### Evaluation Protocol
+We evaluated the pipeline on N=8 test cases spanning:
+- Electrophilic aromatic substitution (n=3)
+- Esterification (n=2)
+- Reduction (n=1)
+- Multi-component mixtures (n=2)
+
+Synthetic mixture spectra were generated with known compositions
+using Lorentzian peak shapes (FWHM=0.02 ppm) and Gaussian noise
+(σ=0.001).
+
+
+1. **ReactionT5 Coverage**: Model trained on specific reaction types; may fail on unusual reactions
+2. **NMRBank Gaps**: ~156k compounds; may not cover all targets
+3. **Linewidth Assumptions**: Deconvolution assumes consistent linewidths
+4. **Solvent Signals**: Pipeline doesn't automatically exclude solvent peaks
+
+\textbf{Workflow.} MixSense operates as an LLM-orchestrated pipeline that integrates three core capabilities. First, given user-specified reactants and an NMR spectrum, a forward-reaction module proposes plausible products and side products present in the measured mixture. To accomplish this, the agent retrieves or simulates pure-component \ce{^1H}-NMR references from public repositories or predictive models to match experimentally observed peaks. Second, the user may add multiple NMR spectra files for time evolution analyses to quantify reactants or products over time. Given hypothesized reaction products, the agent deconvolves the crude spectrum by fitting a non-negative linear combination of candidate spectra with alignment and baseline correction, and returns component fractions as a function of time. It utilizes the area under the curve to track time evolution across multiple time stamps. Third, MixSense estimates flavor descriptors along with associated confidence metrics from SMILES using a lightweight property predictor. This workflow builds on previously developed chemoinformatic tools adapted to function as interactive agents \cite{2025zimmermann, domzal2024magnetstein, kuhn2024twenty, wang2025nmrextractor, sagawa2025reactiont5}.
+
+\textbf{Demo and Interface.} We demonstrated our tool on its three capabilities with an interactive Gradio interface \cite{gradio}: mixture identification and quantification, time-series quantification and property prediction. For parsing the query and for generating output text, we used a DeepSeek model (V3:together) \cite{deepseek}. For demonstrating the identification and quantification of a typical mixture, we gave the interface a language query such as ``Analyze my anisole reaction.'' In this case we upload a reaction mixture NMR spectra for the chlorination of Anisole. The model elucidates possible predicted components as well as their mole fraction and retrieves the NMR spectra of the individual components from the spectral database. We used the sample query ``Track the conversion of anisole during conversion to p-bromoanisole.'' and uploaded multiple CSV files acquired during the bromination of anisole to p-bromoanisole. The analysis quantified component evolution over time along with an accompanying statistical summary. For demonstrating property prediction, we input two SMILES strings: one for ethanol and one for sucrose. The results showed a table with predicted flavor, confidence, with corresponding probabilities for other flavors like bitter, sour, sweet, umami and undefined.
+
+
+\section*{Conclusion}
+What works well (simple mixtures, known compounds)
+Limitations (overlapping peaks, unknown compounds, aromatic systems)
+When to use MixSense vs traditional methods
+
+We plan to broaden spectral coverage by introducing support for 2D NMR. We also plan to expand the toolkit's capabilities to additional analytical modalities such as IR and Raman. 2D NMR, IR/Raman integration
+Uncertainty quantification (conformal prediction)
+Active learning for spectral database expansion
+
+
+\section*{Open-source Materials}
+Our public repository hosts the agent, an app with the interface, deconvolution files, property predictor for flavors and NMR datasets and example mixture data: 
+\href{https://github.com/jdsanc/MixSense.git}{MixSense \faGithubSquare}
+
+\section*{Author Contributions}
+ % J.D.S. and M.M. led writing efforts. M.L. led presentation and ideation. K.P.G. led the development of the property predictor. The LLM agent framework was led by S.E., L.V.L., and M.M. NMR mixture tool was led by S.E., L.V.L., T.R., M.M. and J.D.S.  Data curation and evaluation were led by J.D.S., K.J. and M.L. UI was led by S.E., L.V.L. and T.R. 
+\section{Introduction}
+\lipsum[2]
+\lipsum[3]
+
+
+\section{Headings: first level}
+\label{sec:headings}
+
+\lipsum[4] See Section \ref{sec:headings}.
+
+\subsection{Headings: second level}
+\lipsum[5]
+\begin{equation}
+	\xi _{ij}(t)=P(x_{t}=i,x_{t+1}=j|y,v,w;\theta)= {\frac {\alpha _{i}(t)a^{w_t}_{ij}\beta _{j}(t+1)b^{v_{t+1}}_{j}(y_{t+1})}{\sum _{i=1}^{N} \sum _{j=1}^{N} \alpha _{i}(t)a^{w_t}_{ij}\beta _{j}(t+1)b^{v_{t+1}}_{j}(y_{t+1})}}
+\end{equation}
+
+\subsubsection{Headings: third level}
+\lipsum[6]
+
+\paragraph{Paragraph}
+\lipsum[7]
+
+
+
+\section{Examples of citations, figures, tables, references}
+\label{sec:others}
+
+\subsection{Citations}
+Citations use \verb+natbib+. The documentation may be found at
+\begin{center}
+	\url{http://mirrors.ctan.org/macros/latex/contrib/natbib/natnotes.pdf}
+\end{center}
+
+Here is an example usage of the two main commands (\verb+citet+ and \verb+citep+): Some people thought a thing \citep{kour2014real, hadash2018estimate} but other people thought something else \citep{kour2014fast}. Many people have speculated that if we knew exactly why \citet{kour2014fast} thought this\dots
+
+\subsection{Figures}
+\lipsum[10]
+See Figure \ref{fig:fig1}. Here is how you add footnotes. \footnote{Sample of the first footnote.}
+\lipsum[11]
+
+\begin{figure}
+	\centering
+	\fbox{\rule[-.5cm]{4cm}{4cm} \rule[-.5cm]{4cm}{0cm}}
+	\caption{Sample figure caption.}
+	\label{fig:fig1}
+\end{figure}
+
+\subsection{Tables}
+See awesome Table~\ref{tab:table}.
+
+The documentation for \verb+booktabs+ (`Publication quality tables in LaTeX') is available from:
+\begin{center}
+	\url{https://www.ctan.org/pkg/booktabs}
+\end{center}
+
+
+\begin{table}
+	\caption{Sample table title}
+	\centering
+	\begin{tabular}{lll}
+		\toprule
+		\multicolumn{2}{c}{Part}                   \\
+		\cmidrule(r){1-2}
+		Name     & Description     & Size ($\mu$m) \\
+		\midrule
+		Dendrite & Input terminal  & $\sim$100     \\
+		Axon     & Output terminal & $\sim$10      \\
+		Soma     & Cell body       & up to $10^6$  \\
+		\bottomrule
+	\end{tabular}
+	\label{tab:table}
+\end{table}
+
+\subsection{Lists}
+\begin{itemize}
+	\item Lorem ipsum dolor sit amet
+	\item consectetur adipiscing elit.
+	\item Aliquam dignissim blandit est, in dictum tortor gravida eget. In ac rutrum magna.
+\end{itemize}
+
+
+\bibliographystyle{unsrtnat}
+\bibliography{references}  %%% Uncomment this line and comment out the ``thebibliography'' section below to use the external .bib file (using bibtex) .
+
+
+%%% Uncomment this section and comment out the \bibliography{references} line above to use inline references.
+% \begin{thebibliography}{1}
+
+% 	\bibitem{kour2014real}
+% 	George Kour and Raid Saabne.
+% 	\newblock Real-time segmentation of on-line handwritten arabic script.
+% 	\newblock In {\em Frontiers in Handwriting Recognition (ICFHR), 2014 14th
+% 			International Conference on}, pages 417--422. IEEE, 2014.
+
+% 	\bibitem{kour2014fast}
+% 	George Kour and Raid Saabne.
+% 	\newblock Fast classification of handwritten on-line arabic characters.
+% 	\newblock In {\em Soft Computing and Pattern Recognition (SoCPaR), 2014 6th
+% 			International Conference of}, pages 312--318. IEEE, 2014.
+
+% 	\bibitem{hadash2018estimate}
+% 	Guy Hadash, Einat Kermany, Boaz Carmeli, Ofer Lavi, George Kour, and Alon
+% 	Jacovi.
+% 	\newblock Estimate and replace: A novel approach to integrating deep neural
+% 	networks with existing applications.
+% 	\newblock {\em arXiv preprint arXiv:1804.09028}, 2018.
+
+% \end{thebibliography}
+
+
+\end{document}
