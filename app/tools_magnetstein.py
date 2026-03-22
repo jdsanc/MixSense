@@ -14,8 +14,8 @@ import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'magnetstein'))
 
 try:
-    from masserstein.nmr_spectrum import NMRSpectrum
-    from masserstein.deconv_simplex import estimate_proportions, estimate_proportions_in_time
+    from magnetstein.masserstein.nmr_spectrum import NMRSpectrum
+    from magnetstein.masserstein.deconv_simplex import estimate_proportions, estimate_proportions_in_time
     from pulp import LpSolverDefault
     _HAS_MAGNETSTEIN = True
 except Exception as e:

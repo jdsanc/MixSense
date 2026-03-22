@@ -414,7 +414,6 @@ with gr.Blocks(title="NMR Chemistry Analysis") as demo:
                     chatbot = gr.Chatbot(
                         label="Chat",
                         height=400,
-                        type="messages",
                     )
 
                     with gr.Row():

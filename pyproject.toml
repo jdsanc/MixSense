@@ -5,6 +5,9 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["app"]
 
+[project.scripts]
+mixsense = "app.cli:main"
+
 [project]
 name = "mixsense"
 version = "0.1.0"
@@ -20,6 +23,7 @@ dependencies = [
     "matplotlib>=3.10.8",
     "mcp>=1.26.0",
     "numpy>=2.2.6",
+    "openai>=2.29.0",
     "pandas>=2.3.3",
     "pulp>=3.3.0",
     "pyyaml>=6.0.3",
