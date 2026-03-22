@@ -122,48 +122,6 @@ uv run python app/tool_deconvolve_nmr.py \
   --json
 ```
 
----
-
-## Pipeline Overview
-
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                         MixSense Pipeline                               │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                         │
-│  INPUT: "anisole + Br2 with FeBr3"                                      │
-│           │                                                             │
-│           ▼                                                             │
-│  ┌─────────────────────┐                                                │
-│  │ Step 1: Name        │  "anisole" → "COc1ccccc1"                      │
-│  │ Resolution          │  "Br2"     → "BrBr"                            │
-│  └─────────────────────┘  "FeBr3"   → "Br[Fe](Br)Br"                   │
-│           │                                                             │
-│           ▼                                                             │
-│  ┌─────────────────────┐                                                │
-│  │ Step 2: Reaction    │  ReactionT5 predicts:                          │
-│  │ Prediction          │  → "COc1ccc(Br)cc1" (p-bromoanisole)           │
-│  └─────────────────────┘  → "COc1ccccc1Br" (o-bromoanisole)             │
-│           │                                                             │
-│           ▼                                                             │
-│  ┌─────────────────────┐                                                │
-│  │ Step 3: Reference   │  Query NMRBank for:                            │
-│  │ Lookup              │  - Anisole spectrum                            │
-│  └─────────────────────┘  - p-Bromoanisole spectrum                     │
-│           │                                                             │
-│           ▼                                                             │
-│  ┌─────────────────────┐                                                │
-│  │ Step 4: Mixture     │  Given experimental spectrum,                  │
-│  │ Deconvolution       │  solve: mixture = Σ(cᵢ × refᵢ)                │
-│  └─────────────────────┘                                                │
-│           │                                                             │
-│           ▼                                                             │
-│  OUTPUT: {anisole: 30%, p-bromoanisole: 70%}                            │
-│                                                                         │
-└─────────────────────────────────────────────────────────────────────────┘
-```
-
----
 
 ## Dependencies
 
