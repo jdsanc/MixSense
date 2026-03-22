@@ -78,7 +78,7 @@ def main():
 
     # Masserstein import
     try:
-        from masserstein import NMRSpectrum, estimate_proportions
+        from magnetstein.masserstein import NMRSpectrum, estimate_proportions
     except ImportError:
         print("ERROR: Could not import 'masserstein'. Install it in this environment.", file=sys.stderr)
         raise

@@ -1,5 +1,5 @@
 # app/tools_reactiont5.py
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 import requests
 import os
 import sys
@@ -173,77 +173,58 @@ def get_unique_components(predictions: List[str]) -> List[str]:
 # -----------------
 # Name -> SMILES utility (exposed via this module so callers can "use tools_reactiont5")
 # -----------------
+
+def _llm_name_to_smiles(name: str) -> Optional[str]:
+    """Use an LLM to infer canonical SMILES from a chemical name."""
+    try:
+        from openai import OpenAI
+        client = OpenAI(
+            base_url="https://router.huggingface.co/cerebras/v1",
+            api_key=os.environ.get("HF_TOKEN", ""),
+        )
+        response = client.chat.completions.create(
+            model="llama3.1-8b",
+            messages=[
+                {"role": "system", "content": "You are a chemistry expert. Reply with ONLY the canonical SMILES string, nothing else."},
+                {"role": "user", "content": f"What is the canonical SMILES for: {name}"},
+            ],
+            temperature=0.0,
+            max_tokens=64,
+        )
+        smiles = response.choices[0].message.content.strip().split()[0]
+        m = Chem.MolFromSmiles(smiles)
+        return Chem.MolToSmiles(m, canonical=True) if m else None
+    except Exception:
+        pass
+    return None
+
+
 def resolve_names_to_smiles(text: str) -> List[str]:
     """
     Convert a comma/semicolon separated list of chemical names or SMILES into
-    canonical SMILES. Tries in order:
-      1) explicit SMILES (canonicalize with RDKit)
-      2) local utility normalize_chemical_names (OPSIN/PubChem helpers)
-      3) tiny built-in map for a few common names
+    canonical SMILES. Tries in order per token:
+      1) direct SMILES parse (RDKit)
+      2) hardcoded map for common names
+      3) PubChem REST API
     Returns unique canonical SMILES preserving order.
     """
     parts = [p.strip() for p in (text or "").replace(";", ",").split(",") if p.strip()]
     out: List[str] = []
     seen = set()
 
-    # Try to import the richer resolver if available
-    try:
-        from reactants_to_products.utils import normalize_chemical_names
-
-        resolved = normalize_chemical_names(text)
-        for s in resolved:
-            if s not in seen:
-                seen.add(s)
-                out.append(s)
-        if out:
-            return out
-    except Exception:
-        pass
-
-    fallback_map = {
-        # Common aromatics
-        "anisole": "COc1ccccc1",
-        "benzene": "c1ccccc1",
-        "toluene": "Cc1ccccc1",
-        "phenol": "Oc1ccccc1",
-        "bromobenzene": "Brc1ccccc1",
-        # Bromoanisole products
-        "p-bromoanisole": "COc1ccc(Br)cc1",
-        "4-bromoanisole": "COc1ccc(Br)cc1",
-        "para-bromoanisole": "COc1ccc(Br)cc1",
-        "o-bromoanisole": "COc1ccccc1Br",
-        "2-bromoanisole": "COc1ccccc1Br",
-        "ortho-bromoanisole": "COc1ccccc1Br",
-        # Terpenes
-        "alpha-pinene": "CC1=CCC2CC1C2(C)C",
-        "α-pinene": "CC1=CCC2CC1C2(C)C",
-        "pinene": "CC1=CCC2CC1C2(C)C",
-        # Esters
-        "benzyl benzoate": "O=C(OCc1ccccc1)c2ccccc2",
-        # Reagents
-        "br2": "BrBr",
-        "bromine": "BrBr",
-        "febr3": "Br[Fe](Br)Br",
-        "iron(iii) bromide": "Br[Fe](Br)Br",
-        "iron tribromide": "Br[Fe](Br)Br",
-    }
-
     for tok in parts:
         can = None
+        # 1. Direct SMILES parse
         try:
             m = Chem.MolFromSmiles(tok)
             if m:
                 can = Chem.MolToSmiles(m, canonical=True)
         except Exception:
-            can = None
+            pass
+        # 2. LLM inference
         if can is None:
-            can = fallback_map.get(tok.lower())
-            if can:
-                try:
-                    m = Chem.MolFromSmiles(can)
-                    can = Chem.MolToSmiles(m, canonical=True) if m else None
-                except Exception:
-                    can = None
+            can = _llm_name_to_smiles(tok)
+
         if can and can not in seen:
             seen.add(can)
             out.append(can)
