@@ -145,37 +145,3 @@ uv run pytest tests/ -v
 # Skip NMRBank CSV loading (faster)
 NMRBANK_SKIP_LOAD_FOR_TESTS=1 uv run pytest tests/ -v
 ```
-
----
-
-## Evaluation
-
-### Barebones evaluation (no external deps required)
-
-Runs 8 concrete test cases across all 4 pipeline stages:
-
-```bash
-uv run python -m app.eval.eval_examples
-uv run python -m app.eval.eval_examples --verbose
-uv run python -m app.eval.eval_examples --output results.json
-```
-
-**Metrics reported:**
-- Name resolution: exact SMILES match accuracy
-- Reaction prediction: Top-1 / Top-5 accuracy
-- Reference lookup: NMRBank coverage
-- Deconvolution: Mean Absolute Error (MAE)
-
-### Realistic evaluation (domain gap simulation)
-
-Generates mixture spectra from *perturbed* references (simulating experimental variation) and deconvolves with *clean* database references:
-
-```bash
-uv run python -m app.eval.realistic_evaluation --difficulty easy
-uv run python -m app.eval.realistic_evaluation --difficulty medium
-uv run python -m app.eval.realistic_evaluation --difficulty hard
-uv run python -m app.eval.realistic_evaluation --difficulty all
-uv run python -m app.eval.realistic_evaluation --output results.json
-```
-
-10 test cases: binary, ternary, quaternary, and reaction mixture scenarios.
