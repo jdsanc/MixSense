@@ -4,3 +4,6 @@
 [submodule "nmr-to-structure"]
 	path = nmr-to-structure
 	url = https://github.com/rxn4chemistry/nmr-to-structure.git
+[submodule "nmrmix"]
+	path = nmrmix
+	url = git@github.com:mVenetos97/nmrmix.git
