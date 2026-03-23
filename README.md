@@ -1,38 +1,26 @@
-# 🧪 NMR Chemistry Analysis Platform
+# NMR Chemistry Analysis Platform
 
 NMR (Nuclear Magnetic Resonance) chemistry analysis platform. Provides tools for reaction product prediction, NMR reference lookup, and mixture quantification.
 
 ## Quick Start
 
 ### Install Dependencies
+
+Requires Python 3.10+. Uses [uv](https://docs.astral.sh/uv/) for dependency management.
+
 ```bash
-conda env create -f environment.yml -n mixsense
-conda activate mixsense
+uv sync
 ```
 
 ### Run the Gradio UI
 ```bash
-python -m app.gradio_llm_app
+uv run python -m app.gradio_llm_app
 # Launches at localhost:7667
 ```
 
 ### Run the MCP Server
 ```bash
-python -m app.mcp_server
-# Exposes chemistry tools via Model Context Protocol
-```
-
-### Run the CLI Agent
-```bash
-python -m app.simple_agent --reactants "anisole" "Br2" --reagents "FeBr3"
-```
-
-### Run Tests
-```bash
-pytest tests/ -v
-
-# Skip NMRBank CSV loading (faster)
-NMRBANK_SKIP_LOAD_FOR_TESTS=1 pytest tests/ -v
+uv run python -m app.mcp_server
 ```
 
 ---
@@ -79,7 +67,7 @@ Web interface with:
 
 | Variable | Purpose |
 |----------|---------|
-| `HF_TOKEN` | HuggingFace API token (required for LLM agent) |
+| `HF_TOKEN` | HuggingFace API token (required for reaction prediction via API) |
 | `GRB_LICENSE_FILE` | [Gurobi license](https://www.gurobi.com/academia/academic-program-and-licenses/) file path |
 | `NMRBANK_CSV` | Override NMRBank CSV location |
 | `NMRBANK_SKIP_LOAD_FOR_TESTS` | Set to `1` to skip CSV load in tests |
@@ -96,7 +84,7 @@ Web interface with:
 
 ## NMR Mixture Deconvolution CLI
 
-**Script:** `app/tool_deconvolve_nmr.py`  
+**Script:** `app/tool_deconvolve_nmr.py`
 **Goal:** Deconvolve a 1D NMR mixture spectrum into contributions from known component spectra using [Masserstein](https://github.com/BDomzal/masserstein) optimal transport and the Gurobi linear programming solver.
 
 ### Inputs
@@ -127,14 +115,13 @@ Web interface with:
 ### Example Usage
 
 ```bash
-python app/tool_deconvolve_nmr.py \
+uv run python app/tool_deconvolve_nmr.py \
   mixture.csv comp1.csv comp2.csv \
   --protons 16 12 \
   --names "Component 1" "Component 2" \
   --json
 ```
 
----
 
 ## Dependencies
 
@@ -142,4 +129,19 @@ python app/tool_deconvolve_nmr.py \
 - rdkit, transformers, torch (for ReactionT5)
 - mcp (for MCP server)
 - gradio (for web UI)
-- Gurobi optimizer (optional, for full deconvolution)
+- IsoSpecPy, masserstein (for deconvolution)
+- Gurobi optimizer (optional, for full LP-based deconvolution)
+
+See `pyproject.toml` for the full pinned dependency list.
+
+---
+
+## Tests
+
+```bash
+# Run all tests
+uv run pytest tests/ -v
+
+# Skip NMRBank CSV loading (faster)
+NMRBANK_SKIP_LOAD_FOR_TESTS=1 uv run pytest tests/ -v
+```

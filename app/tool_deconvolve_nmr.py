@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Deconvolve an NMR mixture against component spectra using Masserstein + Gurobi.
+Deconvolve an NMR mixture against component spectra using Magnetstein + CBC solver.
 
 Usage (CSV):
   python tool_deconvolve_nmr.py preprocessed_mix.csv preprocessed_comp0.csv preprocessed_comp1.csv \
@@ -10,7 +10,7 @@ Usage (Mnova TSV export):
   python tool_deconvolve_nmr.py mix.tsv comp0.tsv comp1.tsv --protons 16 12 --mnova
 """
 
-import os, sys, argparse, pathlib, json
+import os, sys, argparse, pathlib, json; sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "magnetstein")))  # magnetstein/masserstein must shadow PyPI masserstein
 import numpy as np
 
 def set_thread_env(n):
@@ -47,15 +47,7 @@ def main():
     ap.add_argument("--names", nargs="+", help='Names for components (e.g. Pinene "Benzyl benzoate")')
     ap.add_argument("--kappa-mix", type=float, default=0.25, help="Kappa for mixture (default: 0.25)")
     ap.add_argument("--kappa-comp", type=float, default=0.22, help="Kappa for components (default: 0.22)")
-    ap.add_argument("--threads", type=int, default=8, help="Solver/BLAS threads (default: 8)")
-    ap.add_argument("--time-limit", type=int, default=300, help="Gurobi time limit seconds (default: 300)")
-    ap.add_argument("--method", choices=["auto","primal","dual","barrier"], default="dual",
-                    help="Gurobi LP method (default: dual)")
-    ap.add_argument("--presolve", type=int, choices=[0,1,2], default=2, help="Presolve level (default: 2)")
-    ap.add_argument("--numeric-focus", type=int, choices=[0,1,2,3], default=1, help="NumericFocus (default: 1)")
-    ap.add_argument("--skip-crossover", action="store_true",
-                    help="If using barrier, skip crossover (Crossover=0)")
-    ap.add_argument("--license-file", help="Path to gurobi.lic (optional; otherwise use environment)")
+    ap.add_argument("--threads", type=int, default=8, help="BLAS threads (default: 8)")
     ap.add_argument("--mnova", action="store_true", help="Treat inputs as Mnova TSV (delimiter='\\t')")
     ap.add_argument("--json", action="store_true", help="Print JSON result line as well")
     ap.add_argument("--quiet", action="store_true", help="Less solver chatter")
@@ -63,24 +55,12 @@ def main():
 
     set_thread_env(args.threads)
 
-    if args.license_file:
-        os.environ["GRB_LICENSE_FILE"] = args.license_file
-
-    # Gurobi sanity check
+    # Magnetstein import
     try:
-        import gurobipy as gp
-        gp.setParam("LogToConsole", 0)
-        _m = gp.Model()
-        _m.Params.LogToConsole = 0
-    except Exception:
-        print("ERROR: Gurobi not ready. Make sure your license is configured.", file=sys.stderr)
-        raise
-
-    # Masserstein import
-    try:
-        from masserstein import NMRSpectrum, estimate_proportions
-    except ImportError:
-        print("ERROR: Could not import 'masserstein'. Install it in this environment.", file=sys.stderr)
+        from magnetstein.masserstein import NMRSpectrum, estimate_proportions
+        from pulp import LpSolverDefault
+    except ImportError as e:
+        print(f"ERROR: Could not import magnetstein/pulp: {e}", file=sys.stderr)
         raise
 
     # Load data
@@ -112,33 +92,16 @@ def main():
         sp.trim_negative_intensities()
         sp.normalize()
 
-    # Solver setup
-    from pulp import GUROBI
-    method_map = {"auto":0, "primal":1, "dual":2, "barrier":3}
-    solver_kwargs = dict(
-        msg=(not args.quiet),
-        Threads=args.threads,
-        TimeLimit=args.time_limit,
-        Presolve=args.presolve,
-        NumericFocus=args.numeric_focus,
-    )
-    if args.method != "auto":
-        solver_kwargs["Method"] = method_map[args.method]
-    if args.method == "barrier" and args.skip_crossover:
-        solver_kwargs["Crossover"] = 0
-
-    solver = GUROBI(**solver_kwargs)
-
     # Solve
     result = estimate_proportions(
         mix, spectra,
         MTD=args.kappa_mix, MTD_th=args.kappa_comp,
         verbose=(not args.quiet),
-        solver=solver
+        solver=LpSolverDefault,
     )
 
     props = [float(p) for p in result.get("proportions", [])]
-    wd = float(result.get("Wasserstein distance", np.nan))
+    wd = float(result.get("Wasserstein distance", float("nan")))
 
     # Output
     print("\nEstimated proportions:")
