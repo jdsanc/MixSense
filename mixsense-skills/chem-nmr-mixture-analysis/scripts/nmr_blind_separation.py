@@ -173,7 +173,7 @@ def main():
     _, evr = run_pca(matrix, max_components=min(10, len(args.spectra)))
     plot_scree(evr, out_dir / "pca_scree.png")
     if not args.quiet:
-        print(f"PCA scree plot saved → {out_dir}/pca_scree.png")
+        print(f"PCA scree plot saved -> {out_dir}/pca_scree.png")
 
     n_components = args.n_components
     if n_components is None:
@@ -197,7 +197,7 @@ def main():
             comments="",
         )
         if not args.quiet:
-            print(f"  Component {i} → {comp_path}")
+            print(f"  Component {i} -> {comp_path}")
 
     # Save abundance matrix
     abundance_path = out_dir / "abundances.csv"
@@ -207,13 +207,13 @@ def main():
         for label, row in zip(labels, W):
             f.write(label + "," + ",".join(f"{v:.6f}" for v in row) + "\n")
     if not args.quiet:
-        print(f"Abundance matrix → {abundance_path}")
+        print(f"Abundance matrix -> {abundance_path}")
 
     # Plots
     plot_components(grid, H, out_dir / "nmf_components.png")
     plot_abundances(W, labels, out_dir / "nmf_abundances.png")
     if not args.quiet:
-        print(f"Plots saved → {out_dir}/")
+        print(f"Plots saved -> {out_dir}/")
 
     # Summary JSON
     summary = {
@@ -228,7 +228,7 @@ def main():
     with open(out_dir / "separation_summary.json", "w") as f:
         json.dump(summary, f, indent=2)
     if not args.quiet:
-        print(f"Summary → {out_dir}/separation_summary.json")
+        print(f"Summary -> {out_dir}/separation_summary.json")
 
 
 if __name__ == "__main__":

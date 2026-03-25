@@ -120,7 +120,7 @@ def main():
         plot_stacked(spectra, labels, args.title, out_path, ppm_range)
     else:
         plot_overlay(spectra, labels, args.title, out_path, ppm_range)
-    print(f"Plot saved → {out_path}")
+    print(f"Plot saved -> {out_path}")
 
 
 if __name__ == "__main__":

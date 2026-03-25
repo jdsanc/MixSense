@@ -15,7 +15,7 @@ from typing import Tuple, List, Optional
 
 
 def detect_delimiter(path: str) -> str:
-    """Heuristic delimiter detection: .tsv → tab, else sniff first line."""
+    """Heuristic delimiter detection: .tsv -> tab, else sniff first line."""
     p = pathlib.Path(path)
     if p.suffix.lower() == ".tsv":
         return "\t"

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-NMR reaction kinetics: supervised deconvolution at each time point → composition vs time.
+NMR reaction kinetics: supervised deconvolution at each time point -> composition vs time.
 
-Runs app/tool_deconvolve_nmr.py on a series of crude spectra recorded at known times,
+Runs nmr_deconvolve.py on a series of crude spectra recorded at known times,
 collects the estimated mole fractions and Wasserstein distances, saves a CSV table
 and a kinetics plot.
 
@@ -20,7 +20,6 @@ Usage:
 Requirements:
     - Environment: mixsense (uv sync)
     - Required packages: numpy, matplotlib
-    - app/tool_deconvolve_nmr.py must be accessible relative to project root
 """
 
 import argparse
@@ -48,7 +47,7 @@ def run_deconvolution(
     Call tool_deconvolve_nmr.py for a single time point and parse its JSON output.
 
     Returns:
-        Dict with keys 'proportions' (dict name→float) and 'Wasserstein distance' (float).
+        Dict with keys 'proportions' (dict name->float) and 'Wasserstein distance' (float).
     """
     cmd = [sys.executable, tool_path, crude] + refs + ["--json", "--quiet"]
     if names:
@@ -151,17 +150,11 @@ def main():
     out_dir = pathlib.Path(args.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    # Locate tool_deconvolve_nmr.py relative to this script or cwd
+    # nmr_deconvolve.py lives in the same scripts/ directory as this file
     script_dir = pathlib.Path(__file__).parent
-    for candidate in [
-        script_dir.parent.parent.parent / "app" / "tool_deconvolve_nmr.py",
-        pathlib.Path("app") / "tool_deconvolve_nmr.py",
-    ]:
-        if candidate.exists():
-            tool_path = str(candidate)
-            break
-    else:
-        print("ERROR: Cannot find app/tool_deconvolve_nmr.py. Run from the MixSense project root.",
+    tool_path = str(script_dir / "nmr_deconvolve.py")
+    if not pathlib.Path(tool_path).exists():
+        print("ERROR: Cannot find nmr_deconvolve.py in the same directory as nmr_kinetics.py.",
               file=sys.stderr)
         sys.exit(1)
 
@@ -202,14 +195,14 @@ def main():
         for t, props, wd in zip(args.times, proportions_over_time, wd_over_time):
             writer.writerow([t] + [props.get(n, float("nan")) for n in names] + [wd])
     if not args.quiet:
-        print(f"\nKinetics table → {csv_path}")
+        print(f"\nKinetics table -> {csv_path}")
 
     # Save plot
     plot_path = out_dir / "kinetics_plot.png"
     save_kinetics_plot(args.times, args.time_unit, names,
                        proportions_over_time, wd_over_time, plot_path)
     if not args.quiet:
-        print(f"Kinetics plot  → {plot_path}")
+        print(f"Kinetics plot  -> {plot_path}")
 
 
 if __name__ == "__main__":
