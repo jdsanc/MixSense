@@ -2,7 +2,7 @@
 NMR spectrum I/O utilities: load single spectra or stacks of time-series spectra.
 
 Usage:
-    from nmr_io import load_spectrum, load_time_series
+    from spectra import load_spectrum, load_time_series
 
 Requirements:
     - Environment: mixsense (uv sync)

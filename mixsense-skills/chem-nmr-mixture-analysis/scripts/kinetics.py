@@ -2,12 +2,12 @@
 """
 NMR reaction kinetics: supervised deconvolution at each time point -> composition vs time.
 
-Runs nmr_deconvolve.py on a series of crude spectra recorded at known times,
+Runs deconvolve.py on a series of crude spectra recorded at known times,
 collects the estimated mole fractions and Wasserstein distances, saves a CSV table
 and a kinetics plot.
 
 Usage:
-    python nmr_kinetics.py \
+    python kinetics.py \
         --refs ref_a.csv ref_b.csv \
         --timepoints t000min.csv t005min.csv t010min.csv \
         --times 0 5 10 \
@@ -44,7 +44,7 @@ def run_deconvolution(
     tool_path: str,
 ) -> dict:
     """
-    Call tool_deconvolve_nmr.py for a single time point and parse its JSON output.
+    Call deconvolve.py for a single time point and parse its JSON output.
 
     Returns:
         Dict with keys 'proportions' (dict name->float) and 'Wasserstein distance' (float).
@@ -150,11 +150,11 @@ def main():
     out_dir = pathlib.Path(args.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    # nmr_deconvolve.py lives in the same scripts/ directory as this file
+    # deconvolve.py lives in the same scripts/ directory as this file
     script_dir = pathlib.Path(__file__).parent
-    tool_path = str(script_dir / "nmr_deconvolve.py")
+    tool_path = str(script_dir / "deconvolve.py")
     if not pathlib.Path(tool_path).exists():
-        print("ERROR: Cannot find nmr_deconvolve.py in the same directory as nmr_kinetics.py.",
+        print("ERROR: Cannot find deconvolve.py in the same directory as kinetics.py.",
               file=sys.stderr)
         sys.exit(1)
 

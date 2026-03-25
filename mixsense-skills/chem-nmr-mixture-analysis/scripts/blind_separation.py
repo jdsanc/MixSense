@@ -6,7 +6,7 @@ chemically distinct components, then NMF to recover pure-component spectral prof
 and their relative abundances at each time point.
 
 Usage:
-    python nmr_blind_separation.py spectrum_t0.csv spectrum_t1.csv spectrum_t2.csv \\
+    python blind_separation.py spectrum_t0.csv spectrum_t1.csv spectrum_t2.csv \\
         --n_components 2 --output_dir nmr_separation_results --labels 0min 30min 60min
 
 Requirements:
@@ -25,7 +25,7 @@ import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA, NMF
 
 sys.path.insert(0, os.path.dirname(__file__))
-from nmr_io import load_time_series
+from spectra import load_time_series
 
 
 def estimate_n_components_pca(evr: np.ndarray, threshold: float = 0.95) -> int:

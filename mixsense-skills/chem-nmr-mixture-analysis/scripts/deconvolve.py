@@ -3,11 +3,11 @@
 Deconvolve an NMR mixture against component spectra using Magnetstein + CBC solver.
 
 Usage (CSV):
-  python nmr_deconvolve.py preprocessed_mix.csv preprocessed_comp0.csv preprocessed_comp1.csv \
+  python deconvolve.py preprocessed_mix.csv preprocessed_comp0.csv preprocessed_comp1.csv \
       --protons 16 12 --names Pinene "Benzyl benzoate"
 
 Usage (Mnova TSV export):
-  python nmr_deconvolve.py mix.tsv comp0.tsv comp1.tsv --protons 16 12 --mnova
+  python deconvolve.py mix.tsv comp0.tsv comp1.tsv --protons 16 12 --mnova
 """
 
 import os, sys, argparse, pathlib, json

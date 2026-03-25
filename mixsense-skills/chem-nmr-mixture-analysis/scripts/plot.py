@@ -3,11 +3,11 @@ Plot and compare NMR spectra: single spectra, overlays, and stacked time-series.
 
 Usage:
     # Overlay multiple spectra
-    python nmr_plot.py spectrum1.csv spectrum2.csv --labels "Mixture" "Ref A" \\
+    python plot.py spectrum1.csv spectrum2.csv --labels "Mixture" "Ref A" \\
         --title "Comparison" --output overlay.png
 
     # Stacked time-series plot
-    python nmr_plot.py t0.csv t1.csv t2.csv --stacked \\
+    python plot.py t0.csv t1.csv t2.csv --stacked \\
         --labels 0min 30min 60min --output time_series.png
 
 Requirements:
@@ -24,7 +24,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 sys.path.insert(0, os.path.dirname(__file__))
-from nmr_io import load_spectrum
+from spectra import load_spectrum
 
 
 def plot_overlay(
