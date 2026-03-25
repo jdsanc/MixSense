@@ -3,7 +3,7 @@ NMRExtractor/
 NMRBank/NMRBank/
 NMRBANK/*.csv
 app/eval/data/
-results/
+
 
 # Python
 **/__pycache__/
