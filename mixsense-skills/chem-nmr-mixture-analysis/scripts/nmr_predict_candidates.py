@@ -7,14 +7,14 @@ Workflow:
   2. Resolve chemical names -> canonical SMILES (RDKit direct parse, then PubChem REST)
   3. Predict reaction products via HuggingFace ReactionT5 API
   4. Look up 1H NMR reference spectra for all species (reactants + products) in NMRBank
-  5. Save found spectra as CSV files ready for deconvolve.py / kinetics.py
+  5. Save found spectra as CSV files ready for nmr_deconvolve.py / nmr_kinetics.py
 
 Usage:
     # From a reaction description file
-    python predict_candidates.py --reaction reaction.txt --nmrbank_csv /path/to/nmrbank.csv
+    python nmr_predict_candidates.py --reaction reaction.txt --nmrbank_csv /path/to/nmrbank.csv
 
     # Inline
-    python predict_candidates.py \
+    python nmr_predict_candidates.py \
         --reactants "camphor" \
         --reagents "NaBH4" \
         --nmrbank_csv /path/to/nmrbank.csv \
@@ -154,6 +154,7 @@ def predict_products(
                 components.append(part)
 
     return components
+
 
 _NUM = re.compile(r"-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?")
 _H1_RANGE = (0.0, 12.5)
@@ -445,7 +446,7 @@ def main():
         print("\nReady for deconvolution:")
         ref_args = " ".join(f'"{e["csv"]}"' for e in found)
         name_args = " ".join(f'"{e["name"]}"' for e in found)
-        print(f"  uv run python mixsense-skills/chem-nmr-mixture-analysis/scripts/deconvolve.py \\")
+        print(f"  uv run python mixsense-skills/chem-nmr-mixture-analysis/scripts/nmr_deconvolve.py \\")
         print(f"    crude.csv {ref_args} \\")
         print(f"    --names {name_args} \\")
         print(f"    --baseline-correct --json")
