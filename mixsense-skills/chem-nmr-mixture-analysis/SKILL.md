@@ -275,4 +275,4 @@ Outputs: `kinetics.csv` + `kinetics_plot.png` under `examples/results/kinetics/`
 ---
 
 **Author:** Magdalena Lederbauer
-**Contact:** [GitHub @magdalenalederbauer](https://github.com/magdalenalederbauer)
+**Contact:** [GitHub @mlederbauer](https://github.com/mlederbauer)
