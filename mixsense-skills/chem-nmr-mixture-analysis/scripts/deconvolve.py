@@ -3,14 +3,16 @@
 Deconvolve an NMR mixture against component spectra using Magnetstein + CBC solver.
 
 Usage (CSV):
-  python tool_deconvolve_nmr.py preprocessed_mix.csv preprocessed_comp0.csv preprocessed_comp1.csv \
+  python deconvolve.py preprocessed_mix.csv preprocessed_comp0.csv preprocessed_comp1.csv \
       --protons 16 12 --names Pinene "Benzyl benzoate"
 
 Usage (Mnova TSV export):
-  python tool_deconvolve_nmr.py mix.tsv comp0.tsv comp1.tsv --protons 16 12 --mnova
+  python deconvolve.py mix.tsv comp0.tsv comp1.tsv --protons 16 12 --mnova
 """
 
-import os, sys, argparse, pathlib, json; sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "magnetstein")))  # magnetstein/masserstein must shadow PyPI masserstein
+import os, sys, argparse, pathlib, json
+# magnetstein submodule lives at the project root (three levels up from scripts/)
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "magnetstein")))
 import numpy as np
 
 def set_thread_env(n):
@@ -220,7 +222,7 @@ def main():
     if args.plot:
         _save_plot(args.plot, mix_arr, comp_arrays, names, props, wd)
         if not args.quiet:
-            print(f"\nPlot saved → {args.plot}")
+            print(f"\nPlot saved -> {args.plot}")
 
 if __name__ == "__main__":
     main()
