@@ -5,7 +5,7 @@ Predict reaction products from reactant/reagent SMILES via ReactionT5 (HuggingFa
 Usage:
     # Env: nmr-agent
     export HF_TOKEN=your_token
-    python predict_products.py \
+    python get_products.py \
         --reactant_smiles "CC1(C)C2CCC1(C)C(=O)C2" \
         --reagent_smiles "[BH4-].[Na+]" \
         --output predictions.json

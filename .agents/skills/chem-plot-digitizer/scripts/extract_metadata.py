@@ -20,8 +20,9 @@ Usage:
 
 Requirements:
     - Conda environment: base-agent
-    - Optional: google-generativeai (for Gemini), openai (for OpenAI)
-    - API key in environment
+    - Core: python-dotenv (for .env loading), Pillow (for image handling)
+    - Providers: google-genai (for Gemini), openai (for OpenAI)
+    - API key in environment or .env file
 """
 
 import argparse

@@ -10,7 +10,7 @@ Usage:
 
 Requirements:
     - Conda environment: base-agent
-    - Required packages: opencv, scikit-image, numpy
+    - Required packages: opencv, scikit-image, numpy, scipy
 """
 
 import argparse

@@ -56,7 +56,7 @@ def plot_overlay(
         out_path: Output file path (.png saved alongside .svg).
         ppm_range: Optional (ppm_min, ppm_max) tuple to restrict the x-axis.
     """
-    fig, ax = plt.subplots(figsize=(10, 4))
+    fig, ax = plt.subplots(figsize=(6, 5))
     for i, ((ppm, intensity), label) in enumerate(zip(spectra, labels)):
         ax.plot(ppm, intensity, linewidth=2.5, label=label, color=f"C{i}")
     ax.invert_xaxis()
@@ -89,7 +89,7 @@ def plot_stacked(
         ppm_range: Optional (ppm_min, ppm_max) to restrict the x-axis.
     """
     n = len(spectra)
-    fig, ax = plt.subplots(figsize=(10, max(5, 2 * n)))
+    fig, ax = plt.subplots(figsize=(6, max(5, 2 * n)))
     for i, ((ppm, intensity), label) in enumerate(zip(spectra, labels)):
         offset = i * (intensity.max() - intensity.min()) * 1.2
         ax.plot(ppm, intensity + offset, linewidth=2.5, color=f"C{i % 10}", label=label)
@@ -159,7 +159,7 @@ def plot_deconvolution(
 
     # --- Figure 1: Deconvolution panels (crude + components) ---
     n_rows = 1 + n_comp
-    fig, axes = plt.subplots(n_rows, 1, figsize=(11, 3 * n_rows), sharex=True)
+    fig, axes = plt.subplots(n_rows, 1, figsize=(6, 3 * n_rows), sharex=True)
     if n_rows == 1:
         axes = [axes]
 
@@ -187,7 +187,7 @@ def plot_deconvolution(
     _save_fig(fig, out_path)
 
     # --- Figure 2: Fit vs Crude (separate, wider for detail) ---
-    fig2, ax_fit = plt.subplots(figsize=(12, 5))
+    fig2, ax_fit = plt.subplots(figsize=(6, 5))
     ax_fit.plot(mix_ppm, mix_int, color="black", lw=2.5, alpha=0.5, label="Crude")
     ax_fit.plot(mix_ppm, fit, color="red", lw=2.5, linestyle="--", label="Fit (sum)")
     ax_fit.fill_between(mix_ppm, residual, 0, color="gray", alpha=0.3, label="Residual")

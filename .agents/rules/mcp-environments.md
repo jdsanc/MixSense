@@ -20,7 +20,10 @@ For detailed installation instructions, please refer to the `README.md` and `ins
 - **adit-agent**: `conda-envs/adit-agent/` (Core: ADiT, lightning, hydra, PyG)
 - **diffcsp-agent**: `conda-envs/diffcsp-agent/` (Core: DiffCSP++, hydra, PyG, pyxtal)
 - **mattergen-agent**: `conda-envs/mattergen-agent/` (Core: MatterGen, PyG, lightning)
-- **xrd-agent**:  `conda-envs/xrd-agent/` (Core: DARA, pymatgen)
+- **xrd-agent**: `conda-envs/xrd-agent/` (Core: DARA, pymatgen)
+
+## MCP Server to Environment Mapping
+
 | MCP Server | Conda Environment | Python Path |
 | :--- | :--- | :--- |
 | matgl | `matgl-agent` | `<conda_base>/envs/matgl-agent/bin/python` |

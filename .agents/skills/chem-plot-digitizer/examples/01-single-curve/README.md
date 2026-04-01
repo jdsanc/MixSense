@@ -8,10 +8,10 @@ A single blue Raman spectrum (PMMA) on a white background with clearly labeled a
 
 ```bash
 # Env: base-agent
-python .agents/skills/general-plot-digitizer/scripts/digitize_pipeline.py \
-  .agents/skills/general-plot-digitizer/examples/01-single-curve/source.png \
+python .agents/skills/chem-plot-digitizer/scripts/digitize_pipeline.py \
+  .agents/skills/chem-plot-digitizer/examples/01-single-curve/source.png \
   --full \
-  --metadata .agents/skills/general-plot-digitizer/examples/01-single-curve/metadata.json \
+  --metadata .agents/skills/chem-plot-digitizer/examples/01-single-curve/metadata.json \
   --curve-color "#1f77b4" \
   --output-dir ./output \
   --overlay

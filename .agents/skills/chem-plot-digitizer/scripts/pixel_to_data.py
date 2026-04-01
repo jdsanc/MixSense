@@ -104,25 +104,33 @@ def pixel_to_data(
             X_data = x_min + t_x * (x_max - x_min)
 
     if y_calibration_points and len(y_calibration_points) >= 2 and y_calibration != "per_curve_normalized":
+        # Sort so that the smaller pixel index (closer to image top) comes first.
         cal = sorted(y_calibration_points, key=lambda p: p["pixel"])
-        p1, p2 = cal[0], cal[-1]
-        px1, v1 = p1["pixel"], p1["value"]
-        px2, v2 = p2["pixel"], p2["value"]
+        p_top, p_bottom = cal[0], cal[-1]
+        px_top, v_top_raw = p_top["pixel"], p_top["value"]
+        px_bottom, v_bottom_raw = p_bottom["pixel"], p_bottom["value"]
 
-        dy_px = px2 - px1
+        # t_y = 0 at image bottom (large pixel), 1 at image top (small pixel),
+        # matching the non-calibration branch where bottom maps to y_min and top to y_max.
+        dy_px = px_top - px_bottom  # typically negative
         if np.abs(dy_px) < 1e-9:
-            dy_px = 1.0
+            dy_px = -1.0
+        t_y = (y_pixel - px_bottom) / dy_px  # 0 at bottom, 1 at top
 
-        t_y = (y_pixel - px1) / dy_px
+        # Apply y_reversed consistently with the non-calibration branch.
+        if y_reversed:
+            t_y = 1.0 - t_y
 
         if y_scale == "log":
-            if v1 <= 0 or v2 <= 0:
+            if v_top_raw <= 0 or v_bottom_raw <= 0:
                 raise ValueError("Log scale requires positive calibration values")
-            log_v1 = np.log10(v1)
-            log_v2 = np.log10(v2)
-            Y_data = 10 ** (log_v1 + t_y * (log_v2 - log_v1))
+            log_v_min = np.log10(min(v_top_raw, v_bottom_raw))
+            log_v_max = np.log10(max(v_top_raw, v_bottom_raw))
+            Y_data = 10 ** (log_v_min + t_y * (log_v_max - log_v_min))
         else:
-            Y_data = v1 + t_y * (v2 - v1)
+            v_min = min(v_top_raw, v_bottom_raw)
+            v_max = max(v_top_raw, v_bottom_raw)
+            Y_data = v_min + t_y * (v_max - v_min)
     else:
         # Y: image y is inverted; top of plot (y_min) = Y_max, bottom (y_max) = Y_min
         dy_pixel = y_max_pixel - y0  # y_min - y_max (negative)
