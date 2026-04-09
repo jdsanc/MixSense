@@ -1,0 +1,18 @@
+name: base-agent
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - rdkit
+  - packmol
+  - pip
+  - pip:
+    - mcp
+    - pymatgen
+    - ase
+    - mp-api
+    - typing-extensions
+    - h5py
+    - pymupdf
+    - reaction-network
+    - pymatgen-analysis-diffusion
