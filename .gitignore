@@ -1,0 +1,4 @@
+research*
+__pycache__/
+*.pyc
+*.pyo
