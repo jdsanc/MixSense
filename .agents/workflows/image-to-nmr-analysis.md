@@ -6,6 +6,6 @@ description: Digitize an NMR spectrum image and quantify its mixture composition
 
 This workflow is a specialization of `reaction-to-nmr-quantification.md` where the user's starting point is an **image** of a 1H NMR spectrum rather than a numeric data file.
 
-The agent should follow `reaction-to-nmr-quantification.md` starting from **Step 0 (Digitize Spectrum Images)**, which invokes the `chem-plot-digitizer` skill to convert the image to a two-column `.csv` file before proceeding with the standard quantification pipeline.
+The agent should follow `reaction-to-nmr-quantification.md` starting from **Step 0 (Digitize Spectrum Images)**, which calls the `digitize_plot` MCP tool to convert the image to a two-column `.csv` file before proceeding with the standard quantification pipeline.
 
 See: [reaction-to-nmr-quantification.md](reaction-to-nmr-quantification.md)

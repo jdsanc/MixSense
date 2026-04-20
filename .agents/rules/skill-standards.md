@@ -105,7 +105,7 @@ Provide concrete, runnable examples that demonstrate typical usage.
 
 Creating a solid-liquid interface for Aluminum:
 ```bash
-# Env: base-agent
+# Env: mixsense
 python .agents/skills/melting-point/scripts/create_interface.py Al_solid.cif Al_liquid.cif --axis 0 --output Al_interface.cif
 ```
 ```
@@ -185,7 +185,7 @@ Every script execution in `SKILL.md` **MUST** include a `# Env: <conda-environme
 
 ### 2. Environment Mapping
 Refer to `mcp-environments.md` for the standard environment mapping:
-- `base-agent`: General materials tools, Materials Project API, and parsing.
+- `mixsense`: General materials tools, Materials Project API, and parsing.
 - `matgl-agent`: MatGL calculations, training, and utilities.
 - `mace-agent`: MACE calculations and training.
 - `fairchem-agent`: FairChem/OCP/UMA calculations.

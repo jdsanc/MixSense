@@ -11,7 +11,7 @@ This example demonstrates looking up aspirin by name in PubChem, retrieving its 
 From the project root:
 
 ```bash
-# Env: base-agent
+# Env: mixsense
 python .agents/skills/drug-db-pubchem/scripts/query_pubchem.py \
   --name "aspirin" \
   --name_type complete \

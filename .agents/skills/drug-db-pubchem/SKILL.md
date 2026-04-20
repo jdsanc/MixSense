@@ -21,7 +21,7 @@ This skill is designed for reproducible, rate-limited queries suitable for autom
 Look up a compound by its common name. Use `--name_type complete` (default) for exact match or `--name_type word` for partial matching.
 
 ```bash
-# Env: base-agent
+# Env: mixsense
 python .agents/skills/drug-db-pubchem/scripts/query_pubchem.py \
   --name "aspirin" \
   --name_type complete \
@@ -33,7 +33,7 @@ python .agents/skills/drug-db-pubchem/scripts/query_pubchem.py \
 For partial name matching (can be noisier):
 
 ```bash
-# Env: base-agent
+# Env: mixsense
 python .agents/skills/drug-db-pubchem/scripts/query_pubchem.py \
   --name "atorvastatin" \
   --name_type word \
@@ -46,7 +46,7 @@ python .agents/skills/drug-db-pubchem/scripts/query_pubchem.py \
 SMILES may contain characters reserved by URL syntax; this script uses HTTP POST to avoid common failures.
 
 ```bash
-# Env: base-agent
+# Env: mixsense
 python .agents/skills/drug-db-pubchem/scripts/query_pubchem.py \
   --smiles "CC(=O)Oc1ccccc1C(=O)O" \
   --max_results 5 \
@@ -58,7 +58,7 @@ python .agents/skills/drug-db-pubchem/scripts/query_pubchem.py \
 Most unambiguous lookup method.
 
 ```bash
-# Env: base-agent
+# Env: mixsense
 python .agents/skills/drug-db-pubchem/scripts/query_pubchem.py \
   --cid 2244 \
   --outdir research/pubchem/CID_2244 \
@@ -69,7 +69,7 @@ python .agents/skills/drug-db-pubchem/scripts/query_pubchem.py \
 InChI uses HTTP POST (like SMILES) to avoid URL syntax issues.
 
 ```bash
-# Env: base-agent
+# Env: mixsense
 python .agents/skills/drug-db-pubchem/scripts/query_pubchem.py \
   --inchikey "BSYNRYMUTXBXSQ-UHFFFAOYSA-N" \
   --outdir research/pubchem/aspirin_inchikey \
@@ -80,7 +80,7 @@ python .agents/skills/drug-db-pubchem/scripts/query_pubchem.py \
 Uses `fastformula` for synchronous molecular formula search. Optionally allow additional elements for broader results.
 
 ```bash
-# Env: base-agent
+# Env: mixsense
 python .agents/skills/drug-db-pubchem/scripts/query_pubchem.py \
   --formula "C9H8O4" \
   --max_results 10 \
@@ -91,7 +91,7 @@ python .agents/skills/drug-db-pubchem/scripts/query_pubchem.py \
 Allow other elements (broader search):
 
 ```bash
-# Env: base-agent
+# Env: mixsense
 python .agents/skills/drug-db-pubchem/scripts/query_pubchem.py \
   --formula "C6H12O6" \
   --allow_other_elements \
@@ -104,7 +104,7 @@ python .agents/skills/drug-db-pubchem/scripts/query_pubchem.py \
 PubChem 3D records are computationally generated and may be unavailable for some CIDs; the script falls back to 2D by default.
 
 ```bash
-# Env: base-agent
+# Env: mixsense
 python .agents/skills/drug-db-pubchem/scripts/query_pubchem.py \
   --name "ibuprofen" \
   --download_sdf \
@@ -117,7 +117,7 @@ python .agents/skills/drug-db-pubchem/scripts/query_pubchem.py \
 Synonyms require extra API calls; disable them for high-throughput workflows.
 
 ```bash
-# Env: base-agent
+# Env: mixsense
 python .agents/skills/drug-db-pubchem/scripts/query_pubchem.py \
   --cid 2244 \
   --no_synonyms \
@@ -130,7 +130,7 @@ python .agents/skills/drug-db-pubchem/scripts/query_pubchem.py \
 Caffeine (download 3D SDF if available):
 
 ```bash
-# Env: base-agent
+# Env: mixsense
 python .agents/skills/drug-db-pubchem/scripts/query_pubchem.py \
   --name "caffeine" \
   --download_sdf \
@@ -144,7 +144,7 @@ python .agents/skills/drug-db-pubchem/scripts/query_pubchem.py \
 - **Request Time Limit**: PUG-REST is intended for short synchronous requests (server timeouts ~30 seconds). Keep `--max_results` small for interactive use.
 - **3D Structures**: PubChem 3D SDF records are computed (not necessarily experimental) and may not exist for all compounds; the script falls back to 2D when needed.
 - **Synonyms**: Synonyms may be numerous and are optional; disable them with `--no_synonyms` for high-throughput workflows.
-- **Environment**: Requires `base-agent` conda environment.
+- **Environment**: Requires `mixsense` conda environment.
 - **Dependencies**: Standard library only (`urllib`, `json`, `argparse`).
 
 ---
