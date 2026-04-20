@@ -1,82 +1,103 @@
-# pendar-digitizer MCP
+# plot-digitizer MCP
 
-Thin MCP shim that exposes the `digitize_plot` tool. Zero business logic — calls the workstation HTTPS API.
+MCP shim that exposes the `digitize_plot` tool for Claude Desktop (and any
+MCP-compatible client). Extracts calibrated (x, y) numeric data from a
+scientific plot or spectrum image (NMR, UV-Vis, Raman, IR, chromatograms, etc.).
 
-## What runs where
+Zero business logic lives here — the shim is a thin client that sends the
+image to a hosted API. The digitization pipeline stays server-side.
+
+## Architecture
 
 ```
-Your machine (Claude / agent)
-  └─ MCP shim (this)  →  HTTPS  →  Workstation (FastAPI + Gemma + digitizer source)
-                                    ├── Cloudflare Tunnel
-                                    ├── uvicorn api.main:app --port 8000
-                                    ├── Gemma (VLM for auto job-plan)
-                                    └── digitizer source (never leaves workstation)
+┌─────────────────────────┐    stdio   ┌──────────────────────────┐
+│ Claude Desktop / Cursor │──────────▶│ plot-digitizer MCP shim   │
+│ (MCP client)            │            │ (this Node process)       │
+└─────────────────────────┘            └────────────┬─────────────┘
+                                                    │ HTTPS
+                                                    │ X-API-Key: <DIGITIZER_API_KEY>
+                                                    ▼
+                                       ┌──────────────────────────┐
+                                       │ plot-digitizer-gateway   │  public
+                                       │ (HF Space, thin proxy)   │
+                                       └────────────┬─────────────┘
+                                                    │ HTTPS
+                                                    │ Authorization: Bearer <HF_TOKEN>
+                                                    │ X-API-Key: <...>
+                                                    ▼
+                                       ┌──────────────────────────┐
+                                       │ plot-digitizer backend   │  private
+                                       │ (HF Space, Docker, CPU)  │  (source hidden)
+                                       └──────────────────────────┘
 ```
 
-## Workstation setup
+Claude generates the **job plan** client-side (via MCP sampling), so the
+backend is CPU-only. The gateway holds the HF token as a Space Secret,
+letting end users reach the private backend with just `DIGITIZER_API_KEY` —
+no HF account needed.
+
+---
+
+## End-user setup (Claude Desktop)
+
+Three steps. Takes ~2 minutes once you have Node.js.
+
+### 1. Install + build
+
+Needs Node.js 18+.
 
 ```bash
-# 1. Install cloudflared
-curl -L https://pkg.cloudflare.com/cloudflare-main.gpg | sudo tee /usr/share/keyrings/cloudflare-main.gpg > /dev/null
-echo "deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared any main" | sudo tee /etc/apt/sources.list.d/cloudflared.list
-sudo apt update && sudo apt install cloudflared
-
-# 2. Start API (inside mixsense env)
-conda activate mixsense
-uvicorn api.main:app --host 127.0.0.1 --port 8000
-
-# 3. Start tunnel (prints your permanent HTTPS URL)
-cloudflared tunnel --url http://localhost:8000
-```
-
-For persistence across reboots, create two systemd services (uvicorn + cloudflared).
-
-## Model weights
-
-The workstation API uses a local Gemma model (via Ollama or HuggingFace Transformers) to auto-generate job plans when `job_plan` is not provided by the caller. Weights are cached at `~/.cache/huggingface/` or `~/.ollama/` and never leave the workstation.
-
-## Client setup
-
-```bash
-cp .env.example .env
-# fill in DIGITIZER_BASE_URL and DIGITIZER_API_KEY (get from repo owner)
-
+git clone https://github.com/<owner>/MixSense
+cd MixSense/.agents/mcp/digitizer
 npm install
 npm run build
 ```
 
-## Claude Desktop / Cursor config
+### 2. Get the API key
 
-```json
-{
-  "mcpServers": {
-    "pendar-digitizer": {
-      "command": "node",
-      "args": ["/absolute/path/to/.agents/mcp/digitizer/dist/index.js"],
-      "env": {
-        "DIGITIZER_BASE_URL": "https://your-tunnel.trycloudflare.com",
-        "DIGITIZER_API_KEY": "your-secret-key"
-      }
-    }
-  }
-}
+Ask the skill maintainer for the `DIGITIZER_API_KEY`. The gateway URL is
+fixed at `https://jdsan-plot-digitizer-gateway.hf.space` (public).
+
+### 3. Generate + install the config snippet
+
+```bash
+DIGITIZER_BASE_URL=https://jdsan-plot-digitizer-gateway.hf.space \
+DIGITIZER_API_KEY=<key> \
+  npm run print-config
 ```
+
+This prints a ready-to-paste JSON snippet. Copy it into:
+
+| OS      | Path                                                             |
+|---------|------------------------------------------------------------------|
+| macOS   | `~/Library/Application Support/Claude/claude_desktop_config.json` |
+| Windows | `%APPDATA%\Claude\claude_desktop_config.json`                    |
+| Linux   | `~/.config/Claude/claude_desktop_config.json`                    |
+
+If the file already has an `mcpServers` key, merge `plot-digitizer` into it.
+
+Restart Claude Desktop. `digitize_plot` appears in the tool list.
+
+---
 
 ## Tool: `digitize_plot`
 
-| Argument | Type | Required | Description |
-|---|---|---|---|
-| `image_path` | string | yes | Absolute path to PNG/JPG/TIFF (max 10 MB) |
-| `job_plan` | object | no | VLM extraction plan; omit for auto-planning |
-| `output_format` | string | no | `json` \| `csv` \| `xy` \| `both` (default: `json`) |
+| Argument        | Type    | Required | Description                                             |
+|-----------------|---------|----------|---------------------------------------------------------|
+| `image_path`    | string  | yes      | Absolute local path to PNG / JPG / TIFF (max 10 MB)     |
+| `job_plan`      | object  | no       | Extraction plan. Omit to have Claude auto-generate one. |
+| `output_format` | string  | no       | `json` \| `csv` \| `xy` \| `both` (default `json`)      |
 
-Rate limits (enforced server-side): **10 req/min, 100 req/day**.
+The shim enforces a file-extension allowlist (`.png`, `.jpg`, `.jpeg`,
+`.tif`, `.tiff`), rejects symlinks/directories, and refuses >10 MB.
+
+---
 
 ## API contract
 
 ```
 POST /v1/digitize
-Authorization: Bearer <DIGITIZER_API_KEY>
+X-API-Key: <DIGITIZER_API_KEY>
 Content-Type: application/json
 
 {
@@ -84,13 +105,75 @@ Content-Type: application/json
   "image_mime": "image/png",
   "image_filename": "spectrum.png",
   "output_format": "json",
-  "job_plan": { ... }   // optional
+  "job_plan": { ... }
 }
 
-→ 200 { job_id, curves: [ { label, x_data, y_data, quality_score, n_points, x_coverage, error } ], warnings }
+→ 200 { job_id, curves: [...], warnings }
 → 401  AUTH_FAILED
-→ 429  rate limited
+→ 429  rate limited (10/min, 100/day per key)
+→ 422  invalid job_plan
 → 500  pipeline error
-
-GET /health  →  { status: "ok" }  (no auth)
 ```
+
+`GET /health` → `{"status":"ok"}` — no auth.
+
+---
+
+## Security
+
+- **`X-API-Key` auth** checked on the backend via `hmac.compare_digest`.
+- **Rate limit** 10/min, 100/day keyed by `X-API-Key` (per-user bucket).
+- **Image size cap** 10 MB raw; rejected both client-side (shim), mid-tier (gateway 16 MB body cap), and server-side (pydantic).
+- **File allowlist** in the shim — only `.png/.jpg/.jpeg/.tif/.tiff`, regular files (no symlinks, no dirs).
+- **Private backend Space** — source code (`spectra/`) is not publicly downloadable.
+- **HF Secrets** hold `DIGITIZER_API_KEY` (backend) and `HF_TOKEN` / `BACKEND_URL` (gateway) — never in git or Space logs.
+- **Fine-grained HF token** — gateway uses a token with *read-only* access to only the backend Space, not the full account.
+- **No shell exec**, no filesystem writes outside cwd.
+
+### Key rotation
+
+Regenerate:
+
+```bash
+python -c "import secrets; print(secrets.token_hex(32))"
+```
+
+Update the secret on the Space (`Settings → Variables and secrets`), then hand
+the new key to users. The Space restarts automatically.
+
+### Hardening options (optional)
+
+- **Cloudflare Access** (zero-trust email gate) in front of the Space — requires
+  a Cloudflare Worker proxying the HF URL; out of scope for default setup.
+- **Per-user keys** — extend `api/auth.py` to look up keys in a small JSON
+  file; keeps the rate-limit bucket per-user.
+
+---
+
+## Local dev
+
+```bash
+npm install
+npm run build
+DIGITIZER_BASE_URL=http://127.0.0.1:7860 \
+DIGITIZER_API_KEY=dev-key \
+  node dist/index.js < test-input.jsonl
+```
+
+The shim talks stdio JSON-RPC — point an MCP client at `dist/index.js`.
+
+---
+
+## Deploying the API (operator only)
+
+Server code lives in `.local/digitizer/` (gitignored). To deploy to Hugging
+Face Spaces:
+
+```bash
+cd .local/digitizer
+huggingface-cli login                    # one-time
+DIGITIZER_API_KEY=<strong-key> \
+  bash deploy/hf-deploy.sh
+```
+
+See `.local/digitizer/README.md` for full operator docs.

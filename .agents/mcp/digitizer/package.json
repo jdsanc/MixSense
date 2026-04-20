@@ -1,13 +1,15 @@
 {
-  "name": "@pendar/digitizer-mcp",
+  "name": "plot-digitizer-mcp",
   "version": "1.0.0",
-  "description": "MCP shim for the pendar-digitizer HTTPS API",
+  "description": "MCP shim for the plot-digitizer HTTPS API",
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "dev": "tsc --watch"
+    "dev": "tsc --watch",
+    "setup": "npm install && npm run build && node scripts/print-config.mjs",
+    "print-config": "node scripts/print-config.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0"

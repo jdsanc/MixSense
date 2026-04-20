@@ -54,7 +54,7 @@ export async function digitizePlot(
   const resp = await fetch(`${cfg.baseUrl}/v1/digitize`, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${cfg.apiKey}`,
+      "X-API-Key": cfg.apiKey,
       "Content-Type": "application/json",
     },
     body: JSON.stringify(body),

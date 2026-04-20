@@ -29,8 +29,8 @@ function safeReadImage(imagePath: string): Buffer {
 }
 
 const server = new Server(
-  { name: "pendar-digitizer", version: "1.1.0" },
-  { capabilities: { tools: {}, sampling: {} } }
+  { name: "plot-digitizer", version: "1.1.0" },
+  { capabilities: { tools: {} } }
 );
 
 server.setRequestHandler(ListToolsRequestSchema, async () => ({
@@ -56,10 +56,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       ? "image/tiff"
       : "image/jpeg";
 
-  let jobPlan = args.job_plan;
+  let jobPlan: object;
 
-  if (jobPlan === undefined) {
-    // Ask the connected Claude client to analyze the image and return a job plan
+  if (args.job_plan !== undefined) {
+    jobPlan = args.job_plan;
+  } else {
     const sampling = await server.createMessage({
       messages: [
         {
