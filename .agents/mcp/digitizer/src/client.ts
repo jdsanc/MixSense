@@ -1,8 +1,6 @@
-import { basename } from "path";
-
 interface Config {
   baseUrl: string;
-  apiKey: string;
+  hfToken: string;
 }
 
 export interface CurveResult {
@@ -26,10 +24,10 @@ export interface DigitizerResponse {
 
 function getConfig(): Config {
   const baseUrl = process.env.DIGITIZER_BASE_URL;
-  const apiKey = process.env.DIGITIZER_API_KEY;
+  const hfToken = process.env.HF_TOKEN;
   if (!baseUrl) throw new Error("DIGITIZER_BASE_URL env var not set");
-  if (!apiKey) throw new Error("DIGITIZER_API_KEY env var not set");
-  return { baseUrl: baseUrl.replace(/\/$/, ""), apiKey };
+  if (!hfToken) throw new Error("HF_TOKEN env var not set — paste any HF read token");
+  return { baseUrl: baseUrl.replace(/\/$/, ""), hfToken };
 }
 
 export async function digitizePlot(
@@ -54,13 +52,13 @@ export async function digitizePlot(
   const resp = await fetch(`${cfg.baseUrl}/v1/digitize`, {
     method: "POST",
     headers: {
-      "X-API-Key": cfg.apiKey,
+      Authorization: `Bearer ${cfg.hfToken}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify(body),
   });
 
-  if (resp.status === 401) throw new Error("AUTH_FAILED — check DIGITIZER_API_KEY");
+  if (resp.status === 401) throw new Error("AUTH_FAILED — check HF_TOKEN (must be a valid HF read token)");
   if (resp.status === 429) {
     const data = (await resp.json().catch(() => ({}))) as { retry_after_seconds?: number };
     throw new Error(`RATE_LIMIT_EXCEEDED — retry after ${data.retry_after_seconds ?? 60}s`);

@@ -6,13 +6,16 @@ scientific plot image — NMR, UV-Vis, IR, Raman, chromatograms.
 
 ## Setup (2 min, needs Node 18+)
 
+Get a Hugging Face **read token** from https://huggingface.co/settings/tokens
+(any read-scoped token works; no write/inference permissions needed).
+
 ```bash
 git clone https://github.com/jdsanc/MixSense
 cd MixSense/.agents/mcp/digitizer
 npm install && npm run build
 
 DIGITIZER_BASE_URL=https://jdsan-plot-digitizer-gateway.hf.space \
-DIGITIZER_API_KEY=<ask-maintainer> \
+HF_TOKEN=hf_your_read_token_here \
   npm run print-config
 ```
 
@@ -36,7 +39,9 @@ Restart Claude Desktop. `digitize_plot` appears in the tool list.
 
 ## Notes
 
-- Requests go via a public gateway that proxies to a private backend
-  where the digitization source lives;
-  `DIGITIZER_API_KEY` is the only credential you need.
+- Requests go via a public gateway that authenticates callers by their own
+  Hugging Face read token (validated via `whoami-v2`) and proxies to a private
+  backend where the digitization source lives. Your token is **not** forwarded
+  to the backend.
+- Rate limit: 100 requests/day, 10/minute, per HF user.
 - Image size cap: 10 MB.

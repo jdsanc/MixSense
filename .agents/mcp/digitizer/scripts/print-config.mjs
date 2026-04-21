@@ -2,11 +2,11 @@
 // Prints the claude_desktop_config.json snippet for this machine.
 //
 //   node scripts/print-config.mjs \
-//       --base-url https://jdsan-plot-digitizer.hf.space \
-//       --api-key $DIGITIZER_API_KEY
+//       --base-url https://jdsan-plot-digitizer-gateway.hf.space \
+//       --hf-token $HF_TOKEN
 //
 // Or via env:
-//   DIGITIZER_BASE_URL=... DIGITIZER_API_KEY=... node scripts/print-config.mjs
+//   DIGITIZER_BASE_URL=... HF_TOKEN=... node scripts/print-config.mjs
 
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -29,10 +29,10 @@ const args = Object.fromEntries(
 );
 
 const baseUrl = args["base-url"] ?? process.env.DIGITIZER_BASE_URL;
-const apiKey = args["api-key"] ?? process.env.DIGITIZER_API_KEY;
+const hfToken = args["hf-token"] ?? process.env.HF_TOKEN;
 
-if (!baseUrl || !apiKey) {
-  console.error("error: need --base-url and --api-key (or DIGITIZER_BASE_URL / DIGITIZER_API_KEY env vars).");
+if (!baseUrl || !hfToken) {
+  console.error("error: need --base-url and --hf-token (or DIGITIZER_BASE_URL / HF_TOKEN env vars).");
   process.exit(1);
 }
 
@@ -43,7 +43,7 @@ const snippet = {
       args: [distPath],
       env: {
         DIGITIZER_BASE_URL: baseUrl,
-        DIGITIZER_API_KEY: apiKey,
+        HF_TOKEN: hfToken,
       },
     },
   },
